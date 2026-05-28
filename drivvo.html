@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drivvo - Controle de Veículo</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🚗%3C/text%3E%3C/svg%3E">
+    <meta name="theme-color" content="#1a1a2e">
+    <style>
+        :root { --bg:#1a1a2e; --card:#16213e; --primary:#e63946; --secondary:#457b9d; --text:#f1faee; --gold:#f4a261; --border:#2a2a4a; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:12px; }
+        .container { max-width:800px; margin:0 auto; }
+        h1 { text-align:center; color:var(--primary); margin-bottom:5px; font-size:1.5em; }
+        .subtitle { text-align:center; color:var(--secondary); font-size:0.85em; margin-bottom:12px; }
+        .tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+        .tab { flex:1; padding:8px 6px; background:var(--card); border:2px solid transparent; color:var(--text); cursor:pointer; border-radius:8px; font-size:0.8em; text-align:center; transition:all 0.2s; }
+        .tab.active { border-color:var(--primary); background:var(--primary); color:white; font-weight:bold; }
+        .tab-content { display:none; } .tab-content.active { display:block; }
+        .card { background:var(--card); border-radius:12px; padding:15px; margin-bottom:12px; border:1px solid var(--border); }
+        .dashboard { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+        .dash-item { background:var(--card); padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border); }
+        .dash-item .number { font-size:1.6em; font-weight:bold; color:var(--gold); }
+        .dash-item .label { font-size:0.8em; color:var(--secondary); margin-top:4px; }
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .form-group { margin-bottom:6px; } .form-group.full { grid-column:1/-1; }
+        .form-group label { display:block; font-size:0.75em; color:var(--secondary); margin-bottom:2px; }
+        .form-group input, .form-group select { width:100%; padding:7px 8px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:0.85em; }
+        .checkbox-group { display:flex; align-items:center; gap:6px; }
+        .checkbox-group input[type="checkbox"] { width:16px; height:16px; accent-color:var(--primary); }
+        .btn { padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s; margin:3px; }
+        .btn-primary { background:var(--primary); color:white; } .btn-primary:hover { opacity:0.9; }
+        .btn-secondary { background:var(--secondary); color:white; } .btn-secondary:hover { opacity:0.9; }
+        .btn-outline { background:transparent; border:1px solid var(--primary); color:var(--primary); }
+        .btn-small { padding:4px 10px; font-size:0.75em; }
+        .result-item { background:var(--bg); padding:10px; border-radius:8px; margin-bottom:6px; border-left:4px solid var(--secondary); }
+        .result-item.abastecimento { border-left-color:var(--primary); }
+        .result-item.despesa { border-left-color:var(--gold); }
+        .result-item.receita { border-left-color:#2ecc71; }
+        .result-header { display:flex; justify-content:space-between; align-items:center; }
+        .result-info strong { color:var(--secondary); display:block; }
+        .empty-state { text-align:center; opacity:0.5; padding:15px; }
+        .badge { display:inline-block; padding:2px 6px; border-radius:6px; font-size:0.7em; margin-left:4px; }
+        .chart-container { width:100%; height:250px; margin-top:12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Drivvo</h1>
+        <p class="subtitle">Controle de abastecimentos, despesas e receitas</p>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
+            <button class="tab" data-tab="historico">📋 Histórico</button>
+            <button class="tab" data-tab="novo">➕ Novo</button>
+            <button class="tab" data-tab="lembretes">🔔 Lembretes</button>
+        </div>
+
+        <div class="tab-content active" id="tab-dashboard">
+            <div class="dashboard">
+                <div class="dash-item"><div class="number" id="saldoAtual">R$ 0,00</div><div class="label">Saldo (Receita - Gastos)</div></div>
+                <div class="dash-item"><div class="number" id="custoKm">R$ 0,00</div><div class="label">Custo por km</div></div>
+                <div class="dash-item"><div class="number" id="consumoMedio">0,00 km/l</div><div class="label">Consumo médio</div></div>
+                <div class="dash-item"><div class="number" id="autonomia">0 km</div><div class="label">Autonomia estimada</div></div>
+            </div>
+            <div class="card">
+                <h3 style="color:var(--secondary);">Gastos mensais</h3>
+                <div class="chart-container"><canvas id="graficoMensal"></canvas></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-historico">
+            <div class="card">
+                <h2>📋 Registros</h2>
+                <select id="filtroTipo" onchange="renderHistorico()" style="margin-bottom:10px; background:var(--bg); color:var(--text); border:1px solid var(--border); padding:6px; border-radius:6px;">
+                    <option value="todos">Todos</option>
+                    <option value="abastecimento">Abastecimentos</option>
+                    <option value="despesa">Despesas</option>
+                    <option value="receita">Receitas</option>
+                </select>
+                <div id="historicoList"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-novo">
+            <div class="card">
+                <h2>➕ Novo Registro</h2>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="tipoRegistro" onchange="atualizarFormulario()" style="background:var(--bg); color:var(--text); border:1px solid var(--border); padding:8px; border-radius:8px; width:100%;">
+                        <option value="abastecimento">⛽ Abastecimento</option>
+                        <option value="despesa">💸 Despesa</option>
+                        <option value="receita">💰 Receita</option>
+                    </select>
+                </div>
+                <div class="form-grid" id="formDinamico"></div>
+                <button class="btn-primary btn-small" onclick="salvarRegistro()" style="margin-top:12px;">💾 Salvar</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-lembretes">
+            <div class="card">
+                <h2>🔔 Próximo abastecimento</h2>
+                <div id="lembretesConteudo"><p class="empty-state">Registre dois abastecimentos com tanque cheio para calcular a previsão.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script type="module">
+        // ==================== CONFIGURAÇÃO DO FIREBASE (SUBSTITUA AQUI) ====================
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, push, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "COLOQUE_SUA_API_KEY",
+            authDomain: "COLOQUE_SEU_DOMINIO.firebaseapp.com",
+            projectId: "COLOQUE_SEU_PROJECT_ID",
+            storageBucket: "COLOQUE_SEU_STORAGE_BUCKET",
+            messagingSenderId: "COLOQUE_SEU_SENDER_ID",
+            appId: "COLOQUE_SEU_APP_ID"
+        };
+        // ==================================================================================
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        let chartInstance = null;
+        // uid fixo (depois substituir pelo uid do usuário autenticado)
+        const USER_ID = 'demo-user';
+
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+                if (tabName === 'dashboard') carregarDashboard();
+                else if (tabName === 'historico') renderHistorico();
+                else if (tabName === 'lembretes') gerarLembretes();
+            });
+        });
+
+        // Formulário dinâmico
+        window.atualizarFormulario = function() {
+            const tipo = document.getElementById('tipoRegistro').value;
+            const container = document.getElementById('formDinamico');
+            let html = '';
+            if (tipo === 'abastecimento') {
+                html = `
+                    <div class="form-group"><label>Data</label><input type="date" id="data_abast" required></div>
+                    <div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div>
+                    <div class="form-group"><label>Litros</label><input type="number" step="0.01" id="litros" required></div>
+                    <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="valorAbast" required></div>
+                    <div class="form-group"><label>Preço por litro</label><input type="number" step="0.001" id="precoLitro"></div>
+                    <div class="form-group"><label>Posto</label><input type="text" id="posto"></div>
+                    <div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>
+                `;
+            } else if (tipo === 'despesa') {
+                html = `
+                    <div class="form-group"><label>Data</label><input type="date" id="data_desp" required></div>
+                    <div class="form-group"><label>Km</label><input type="number" id="km_desp" required></div>
+                    <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div>
+                    <div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div>
+                    <div class="form-group"><label>Categoria</label><input type="text" id="categoria"></div>
+                `;
+            } else if (tipo === 'receita') {
+                html = `
+                    <div class="form-group"><label>Data</label><input type="date" id="data_rec" required></div>
+                    <div class="form-group"><label>Km</label><input type="number" id="km_rec" required></div>
+                    <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorRec" required></div>
+                    <div class="form-group"><label>Tipo (ex: app transporte)</label><input type="text" id="tipoReceita"></div>
+                `;
+            }
+            container.innerHTML = html;
+            const hoje = new Date().toISOString().split('T')[0];
+            const dateInput = document.querySelector('#formDinamico input[type="date"]');
+            if (dateInput) dateInput.value = hoje;
+        };
+        atualizarFormulario();
+
+        window.salvarRegistro = async function() {
+            const tipo = document.getElementById('tipoRegistro').value;
+            let dados = { uid: USER_ID };
+            try {
+                if (tipo === 'abastecimento') {
+                    dados = {
+                        ...dados,
+                        data: document.getElementById('data_abast').value,
+                        km: Number(document.getElementById('km_abast').value),
+                        litros: Number(document.getElementById('litros').value),
+                        valor_total: Number(document.getElementById('valorAbast').value),
+                        preco_litro: Number(document.getElementById('precoLitro').value) || 0,
+                        posto: document.getElementById('posto').value,
+                        tanque_cheio: document.getElementById('tanqueCheio').checked
+                    };
+                } else if (tipo === 'despesa') {
+                    dados = {
+                        ...dados,
+                        data: document.getElementById('data_desp').value,
+                        km: Number(document.getElementById('km_desp').value),
+                        valor: Number(document.getElementById('valorDesp').value),
+                        descricao: document.getElementById('descricao').value,
+                        categoria: document.getElementById('categoria').value
+                    };
+                } else if (tipo === 'receita') {
+                    dados = {
+                        ...dados,
+                        data: document.getElementById('data_rec').value,
+                        km: Number(document.getElementById('km_rec').value),
+                        valor: Number(document.getElementById('valorRec').value),
+                        tipo: document.getElementById('tipoReceita').value
+                    };
+                }
+                const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
+                const novoRef = push(ref(db, colecao));
+                await set(novoRef, dados);
+                alert('Registro salvo!');
+                atualizarFormulario();
+                if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao salvar: ' + error.message);
+            }
+        };
+
+        window.renderHistorico = async function() {
+            const lista = document.getElementById('historicoList');
+            const filtro = document.getElementById('filtroTipo').value;
+            lista.innerHTML = '<p class="empty-state">Carregando...</p>';
+            const colecoes = ['abastecimentos', 'despesas', 'receitas'];
+            let registros = [];
+            for (const col of colecoes) {
+                if (filtro !== 'todos' && col !== filtro + 's') continue;
+                const q = query(ref(db, col), orderByChild('uid'), equalTo(USER_ID));
+                const snap = await get(q);
+                if (snap.exists()) {
+                    snap.forEach(child => {
+                        registros.push({ id: child.key, tipo: col.slice(0, -1), ...child.val() });
+                    });
+                }
+            }
+            registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
+            if (registros.length === 0) {
+                lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
+                return;
+            }
+            let html = '';
+            registros.forEach(r => {
+                const classe = r.tipo;
+                html += `<div class="result-item ${classe}">
+                    <div class="result-header">
+                        <div class="result-info">
+                            <strong>${r.tipo === 'abastecimento' ? '⛽ Abastecimento' : r.tipo === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
+                            <span>📅 ${r.data} - Km: ${r.km}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:4px;">`;
+                if (r.tipo === 'abastecimento') {
+                    html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
+                    if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
+                } else if (r.tipo === 'despesa') {
+                    html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
+                    if (r.categoria) html += ` (${r.categoria})`;
+                } else if (r.tipo === 'receita') {
+                    html += `🔹 ${r.tipo} - R$ ${Number(r.valor).toFixed(2)}`;
+                }
+                html += `</div></div>`;
+            });
+            lista.innerHTML = html;
+        };
+
+        function calcularConsumoMedio(abastecimentos) {
+            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
+            if (tanquesCheios.length < 2) return 0;
+            tanquesCheios.sort((a, b) => a.data < b.data ? -1 : 1);
+            const ultimo = tanquesCheios[tanquesCheios.length - 1];
+            const penultimo = tanquesCheios[tanquesCheios.length - 2];
+            const kmPercorridos = ultimo.km - penultimo.km;
+            if (kmPercorridos <= 0) return 0;
+            const entre = abastecimentos.filter(a => a.data > penultimo.data && a.data <= ultimo.data);
+            const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
+            return totalLitros > 0 ? kmPercorridos / totalLitros : 0;
+        }
+
+        function custoPorKm(abastecimentos, despesas) {
+            const todos = [...abastecimentos, ...despesas];
+            if (todos.length < 2) return 0;
+            const kms = todos.map(r => r.km);
+            const kmTotal = Math.max(...kms) - Math.min(...kms);
+            if (kmTotal === 0) return 0;
+            const gastoTotal = abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0) + despesas.reduce((s, d) => s + Number(d.valor), 0);
+            return gastoTotal / kmTotal;
+        }
+
+        async function carregarDashboard() {
+            const abastSnap = await get(query(ref(db, 'abastecimentos'), orderByChild('uid'), equalTo(USER_ID)));
+            const despSnap = await get(query(ref(db, 'despesas'), orderByChild('uid'), equalTo(USER_ID)));
+            const recSnap = await get(query(ref(db, 'receitas'), orderByChild('uid'), equalTo(USER_ID)));
+            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => abastecimentos.push({ id: d.key, ...d.val() }));
+            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => despesas.push({ id: d.key, ...d.val() }));
+            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => receitas.push({ id: d.key, ...d.val() }));
+
+            const totalReceitas = receitas.reduce((s, r) => s + Number(r.valor), 0);
+            const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0) + abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0);
+            document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
+            document.getElementById('custoKm').textContent = `R$ ${custoPorKm(abastecimentos, despesas).toFixed(2)}`;
+
+            const consumo = calcularConsumoMedio(abastecimentos);
+            document.getElementById('consumoMedio').textContent = `${consumo.toFixed(2)} km/l`;
+
+            let autonomia = 0;
+            if (consumo > 0 && abastecimentos.length > 0) {
+                const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
+                if (ultimo.tanque_cheio) autonomia = Math.round(consumo * ultimo.litros);
+            }
+            document.getElementById('autonomia').textContent = `${autonomia} km`;
+
+            const gastosPorMes = {};
+            [...abastecimentos, ...despesas].forEach(r => {
+                const [ano, mes] = r.data.split('-');
+                const mesAno = `${mes}/${ano}`;
+                const valor = r.valor_total || r.valor || 0;
+                gastosPorMes[mesAno] = (gastosPorMes[mesAno] || 0) + Number(valor);
+            });
+            const labels = Object.keys(gastosPorMes).sort((a, b) => {
+                const [mA, aA] = a.split('/');
+                const [mB, aB] = b.split('/');
+                return new Date(aA, mA-1) - new Date(aB, mB-1);
+            });
+            const dados = labels.map(l => gastosPorMes[l]);
+            const ctx = document.getElementById('graficoMensal').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{ label: 'Gastos (R$)', data: dados, backgroundColor: '#e63946' }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#f1faee' } },
+                        x: { ticks: { color: '#f1faee' } }
+                    },
+                    plugins: { legend: { labels: { color: '#f1faee' } } }
+                }
+            });
+        }
+
+        async function gerarLembretes() {
+            const div = document.getElementById('lembretesConteudo');
+            const abastSnap = await get(query(ref(db, 'abastecimentos'), orderByChild('uid'), equalTo(USER_ID)));
+            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => abastecimentos.push({ id: d.key, ...d.val() }));
+            if (abastecimentos.length === 0) {
+                div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
+                return;
+            }
+            const consumo = calcularConsumoMedio(abastecimentos);
+            if (consumo <= 0) {
+                div.innerHTML = '<p class="empty-state">Registre dois abastecimentos com tanque cheio para calcular a previsão.</p>';
+                return;
+            }
+            const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
+            const autonomia = Math.round(consumo * ultimo.litros);
+            const kmLembrete = ultimo.km + autonomia;
+            div.innerHTML = `
+                <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
+                <p>⛽ Último abastecimento: <strong>${ultimo.km} km</strong> (${ultimo.litros}L)</p>
+                <p>🔔 Próximo abastecimento estimado: <strong>${kmLembrete} km</strong></p>
+            `;
+        }
+
+        // Inicializa dashboard
+        carregarDashboard();
+    </script>
+</body>
+</html>
