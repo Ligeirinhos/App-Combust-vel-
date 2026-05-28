@@ -142,7 +142,7 @@
             });
         });
 
-        // Formulário dinâmico
+        // Formulário dinâmico (mantido igual ao anterior)
         window.atualizarFormulario = function() {
             const tipo = document.getElementById('tipoRegistro').value;
             const container = document.getElementById('formDinamico');
@@ -190,7 +190,7 @@
 
         atualizarFormulario();
 
-        // Salvar com depuração
+        // Salvar (mantido igual)
         window.salvarRegistro = async function() {
             alert('Iniciando salvamento...');
             const tipo = document.getElementById('tipoRegistro').value;
@@ -235,7 +235,6 @@
                 await set(novoRef, dados);
                 alert('Registro salvo com sucesso! ✅');
                 atualizarFormulario();
-                // Recarrega o dashboard apenas se estiver ativo
                 if (document.getElementById('tab-dashboard').classList.contains('active')) {
                     carregarDashboard();
                 }
@@ -245,54 +244,130 @@
             }
         };
 
-        // Histórico com depuração
-        window.renderHistorico = async function() {
-            alert('📋 Carregando histórico...');
-            const lista = document.getElementById('historicoList');
-            const filtro = document.getElementById('filtroTipo').value;
-            lista.innerHTML = '<p class="empty-state">Carregando...</p>';
-            const colecoes = ['abastecimentos', 'despesas', 'receitas'];
-            let registros = [];
-            for (const col of colecoes) {
-                if (filtro !== 'todos' && col !== filtro + 's') continue;
-                const q = query(ref(db, col), orderByChild('uid'), equalTo(USER_ID));
-                const snap = await get(q);
-                if (snap.exists()) {
-                    snap.forEach(child => {
-                        registros.push({ id: child.key, tipo: col.slice(0, -1), ...child.val() });
+        // ========== LEITURAS: SEM FILTRO DE UID (TESTE) ==========
+        async function carregarDashboard() {
+            try {
+                alert('🔄 Buscando dados (sem filtro uid)...');
+                // Consulta sem orderByChild nem equalTo (traz todos os registros)
+                const abastSnap = await get(ref(db, 'abastecimentos'));
+                const despSnap = await get(ref(db, 'despesas'));
+                const recSnap = await get(ref(db, 'receitas'));
+                
+                const abastecimentos = []; 
+                if (abastSnap.exists()) abastSnap.forEach(d => abastecimentos.push({ id: d.key, ...d.val() }));
+                const despesas = []; 
+                if (despSnap.exists()) despSnap.forEach(d => despesas.push({ id: d.key, ...d.val() }));
+                const receitas = []; 
+                if (recSnap.exists()) recSnap.forEach(d => receitas.push({ id: d.key, ...d.val() }));
+
+                alert(`📊 Encontrados: ${abastecimentos.length} abast, ${despesas.length} desp, ${receitas.length} rec`);
+
+                const totalReceitas = receitas.reduce((s, r) => s + Number(r.valor), 0);
+                const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0) + abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0);
+                document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
+                document.getElementById('custoKm').textContent = `R$ ${custoPorKm(abastecimentos, despesas).toFixed(2)}`;
+
+                const consumo = calcularConsumoMedio(abastecimentos);
+                document.getElementById('consumoMedio').textContent = `${consumo.toFixed(2)} km/l`;
+
+                let autonomia = 0;
+                if (consumo > 0 && abastecimentos.length > 0) {
+                    const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
+                    if (ultimo.tanque_cheio) autonomia = Math.round(consumo * ultimo.litros);
+                }
+                document.getElementById('autonomia').textContent = `${autonomia} km`;
+
+                const gastosPorMes = {};
+                [...abastecimentos, ...despesas].forEach(r => {
+                    const [ano, mes] = r.data.split('-');
+                    const mesAno = `${mes}/${ano}`;
+                    const valor = r.valor_total || r.valor || 0;
+                    gastosPorMes[mesAno] = (gastosPorMes[mesAno] || 0) + Number(valor);
+                });
+                const labels = Object.keys(gastosPorMes).sort((a, b) => {
+                    const [mA, aA] = a.split('/');
+                    const [mB, aB] = b.split('/');
+                    return new Date(aA, mA-1) - new Date(aB, mB-1);
+                });
+                const dados = labels.map(l => gastosPorMes[l]);
+                const ctx = document.getElementById('graficoMensal').getContext('2d');
+                if (chartInstance) chartInstance.destroy();
+                if (dados.length > 0) {
+                    chartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [{ label: 'Gastos (R$)', data: dados, backgroundColor: '#e63946' }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true, ticks: { color: '#f1faee' } },
+                                x: { ticks: { color: '#f1faee' } }
+                            },
+                            plugins: { legend: { labels: { color: '#f1faee' } } }
+                        }
                     });
                 }
+                alert('Dashboard atualizado!');
+            } catch (error) {
+                alert('❌ Erro no dashboard: ' + error.message);
+                console.error(error);
             }
-            registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
-            if (registros.length === 0) {
-                lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
-                alert('Nenhum registro encontrado.');
-                return;
-            }
-            let html = '';
-            registros.forEach(r => {
-                const classe = r.tipo;
-                html += `<div class="result-item ${classe}">
-                    <div class="result-header">
-                        <div class="result-info">
-                            <strong>${r.tipo === 'abastecimento' ? '⛽ Abastecimento' : r.tipo === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
-                            <span>📅 ${r.data} - Km: ${r.km}</span>
-                        </div>
-                    </div>
-                    <div style="margin-top:4px;">`;
-                if (r.tipo === 'abastecimento') {
-                    html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
-                    if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
-                } else if (r.tipo === 'despesa') {
-                    html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
-                    if (r.categoria) html += ` (${r.categoria})`;
-                } else if (r.tipo === 'receita') {
-                    html += `🔹 ${r.tipo} - R$ ${Number(r.valor).toFixed(2)}`;
+        }
+
+        window.renderHistorico = async function() {
+            try {
+                alert('📋 Buscando histórico...');
+                const lista = document.getElementById('historicoList');
+                const filtro = document.getElementById('filtroTipo').value;
+                lista.innerHTML = '<p class="empty-state">Carregando...</p>';
+                const colecoes = ['abastecimentos', 'despesas', 'receitas'];
+                let registros = [];
+                for (const col of colecoes) {
+                    if (filtro !== 'todos' && col !== filtro + 's') continue;
+                    const snap = await get(ref(db, col)); // sem filtro uid
+                    if (snap.exists()) {
+                        snap.forEach(child => {
+                            registros.push({ id: child.key, tipo: col.slice(0, -1), ...child.val() });
+                        });
+                    }
                 }
-                html += `</div></div>`;
-            });
-            lista.innerHTML = html;
-            alert(`✅ Histórico carregado com ${registros.length} registros.`);
+                registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
+                if (registros.length === 0) {
+                    lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
+                    alert('Nenhum registro.');
+                    return;
+                }
+                let html = '';
+                registros.forEach(r => {
+                    const classe = r.tipo;
+                    html += `<div class="result-item ${classe}">
+                        <div class="result-header">
+                            <div class="result-info">
+                                <strong>${r.tipo === 'abastecimento' ? '⛽ Abastecimento' : r.tipo === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
+                                <span>📅 ${r.data} - Km: ${r.km}</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:4px;">`;
+                    if (r.tipo === 'abastecimento') {
+                        html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
+                        if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
+                    } else if (r.tipo === 'despesa') {
+                        html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
+                        if (r.categoria) html += ` (${r.categoria})`;
+                    } else if (r.tipo === 'receita') {
+                        html += `🔹 ${r.tipo} - R$ ${Number(r.valor).toFixed(2)}`;
+                    }
+                    html += `</div></div>`;
+                });
+                lista.innerHTML = html;
+                alert(`✅ ${registros.length} itens exibidos.`);
+            } catch (error) {
+                alert('❌ Erro no histórico: ' + error.message);
+                console.error(error);
+            }
         };
 
         function calcularConsumoMedio(abastecimentos) {
@@ -318,68 +393,9 @@
             return gastoTotal / kmTotal;
         }
 
-        async function carregarDashboard() {
-            alert('🔄 Atualizando dashboard...');
-            const abastSnap = await get(query(ref(db, 'abastecimentos'), orderByChild('uid'), equalTo(USER_ID)));
-            const despSnap = await get(query(ref(db, 'despesas'), orderByChild('uid'), equalTo(USER_ID)));
-            const recSnap = await get(query(ref(db, 'receitas'), orderByChild('uid'), equalTo(USER_ID)));
-            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => abastecimentos.push({ id: d.key, ...d.val() }));
-            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => despesas.push({ id: d.key, ...d.val() }));
-            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => receitas.push({ id: d.key, ...d.val() }));
-
-            alert(`📊 ${abastecimentos.length} abastecimentos, ${despesas.length} despesas, ${receitas.length} receitas`);
-
-            const totalReceitas = receitas.reduce((s, r) => s + Number(r.valor), 0);
-            const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0) + abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0);
-            document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
-            document.getElementById('custoKm').textContent = `R$ ${custoPorKm(abastecimentos, despesas).toFixed(2)}`;
-
-            const consumo = calcularConsumoMedio(abastecimentos);
-            document.getElementById('consumoMedio').textContent = `${consumo.toFixed(2)} km/l`;
-
-            let autonomia = 0;
-            if (consumo > 0 && abastecimentos.length > 0) {
-                const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
-                if (ultimo.tanque_cheio) autonomia = Math.round(consumo * ultimo.litros);
-            }
-            document.getElementById('autonomia').textContent = `${autonomia} km`;
-
-            const gastosPorMes = {};
-            [...abastecimentos, ...despesas].forEach(r => {
-                const [ano, mes] = r.data.split('-');
-                const mesAno = `${mes}/${ano}`;
-                const valor = r.valor_total || r.valor || 0;
-                gastosPorMes[mesAno] = (gastosPorMes[mesAno] || 0) + Number(valor);
-            });
-            const labels = Object.keys(gastosPorMes).sort((a, b) => {
-                const [mA, aA] = a.split('/');
-                const [mB, aB] = b.split('/');
-                return new Date(aA, mA-1) - new Date(aB, mB-1);
-            });
-            const dados = labels.map(l => gastosPorMes[l]);
-            const ctx = document.getElementById('graficoMensal').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{ label: 'Gastos (R$)', data: dados, backgroundColor: '#e63946' }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { color: '#f1faee' } },
-                        x: { ticks: { color: '#f1faee' } }
-                    },
-                    plugins: { legend: { labels: { color: '#f1faee' } } }
-                }
-            });
-        }
-
         async function gerarLembretes() {
             const div = document.getElementById('lembretesConteudo');
-            const abastSnap = await get(query(ref(db, 'abastecimentos'), orderByChild('uid'), equalTo(USER_ID)));
+            const abastSnap = await get(ref(db, 'abastecimentos'));
             const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => abastecimentos.push({ id: d.key, ...d.val() }));
             if (abastecimentos.length === 0) {
                 div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
@@ -400,7 +416,7 @@
             `;
         }
 
-        // Inicializa o dashboard
+        // Inicializa o dashboard (que agora puxa todos os dados)
         carregarDashboard();
     </script>
 </body>
