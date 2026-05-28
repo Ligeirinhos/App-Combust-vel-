@@ -109,7 +109,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <script type="module">
-        // ==================== CONFIGURAÇÃO DO FIREBASE (SUBSTITUA AQUI) ====================
+        // ==================== CONFIGURAÇÃO DO FIREBASE (SUBSTITUA PELAS SUAS CREDENCIAIS) ====================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
@@ -121,12 +121,11 @@
             messagingSenderId: "COLOQUE_SEU_SENDER_ID",
             appId: "COLOQUE_SEU_APP_ID"
         };
-        // ==================================================================================
+        // ==================================================================================================
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         let chartInstance = null;
-        // uid fixo (depois substituir pelo uid do usuário autenticado)
         const USER_ID = 'demo-user';
 
         // Tabs
@@ -143,7 +142,7 @@
             });
         });
 
-        // Formulário dinâmico
+        // Formulário dinâmico (com campos na ordem correta e cálculo automático de litros)
         window.atualizarFormulario = function() {
             const tipo = document.getElementById('tipoRegistro').value;
             const container = document.getElementById('formDinamico');
@@ -152,9 +151,9 @@
                 html = `
                     <div class="form-group"><label>Data</label><input type="date" id="data_abast" required></div>
                     <div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div>
-                    <div class="form-group"><label>Litros</label><input type="number" step="0.01" id="litros" required></div>
-                    <div class="form-group"><label>Valor total</label><input type="number" step="0.01" id="valorAbast" required></div>
-                    <div class="form-group"><label>Preço por litro</label><input type="number" step="0.001" id="precoLitro"></div>
+                    <div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" required oninput="calcularLitros()"></div>
+                    <div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" required oninput="calcularLitros()"></div>
+                    <div class="form-group"><label>Litros (automático)</label><input type="number" step="0.01" id="litros" readonly></div>
                     <div class="form-group"><label>Posto</label><input type="text" id="posto"></div>
                     <div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>
                 `;
@@ -179,20 +178,37 @@
             const dateInput = document.querySelector('#formDinamico input[type="date"]');
             if (dateInput) dateInput.value = hoje;
         };
+
+        // Cálculo automático de litros
+        window.calcularLitros = function() {
+            const preco = parseFloat(document.getElementById('precoLitro')?.value);
+            const valor = parseFloat(document.getElementById('valorAbast')?.value);
+            const litrosInput = document.getElementById('litros');
+            if (litrosInput && preco > 0 && valor > 0) {
+                litrosInput.value = (valor / preco).toFixed(2);
+            }
+        };
+
         atualizarFormulario();
 
+        // Salvar registro (com depuração via alert)
         window.salvarRegistro = async function() {
+            alert('Iniciando salvamento...');
             const tipo = document.getElementById('tipoRegistro').value;
             let dados = { uid: USER_ID };
             try {
                 if (tipo === 'abastecimento') {
+                    const precoLitro = document.getElementById('precoLitro');
+                    const valorTotal = document.getElementById('valorAbast');
+                    const litros = document.getElementById('litros');
+                    if (!precoLitro || !valorTotal || !litros) throw new Error('Campos do abastecimento não encontrados.');
                     dados = {
                         ...dados,
                         data: document.getElementById('data_abast').value,
                         km: Number(document.getElementById('km_abast').value),
-                        litros: Number(document.getElementById('litros').value),
-                        valor_total: Number(document.getElementById('valorAbast').value),
-                        preco_litro: Number(document.getElementById('precoLitro').value) || 0,
+                        litros: Number(litros.value),
+                        valor_total: Number(valorTotal.value),
+                        preco_litro: Number(precoLitro.value),
                         posto: document.getElementById('posto').value,
                         tanque_cheio: document.getElementById('tanqueCheio').checked
                     };
@@ -215,17 +231,19 @@
                     };
                 }
                 const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
+                alert('Salvando no banco: ' + colecao);
                 const novoRef = push(ref(db, colecao));
                 await set(novoRef, dados);
-                alert('Registro salvo!');
+                alert('Registro salvo com sucesso! ✅');
                 atualizarFormulario();
                 if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
             } catch (error) {
+                alert('❌ Erro ao salvar: ' + error.message);
                 console.error(error);
-                alert('Erro ao salvar: ' + error.message);
             }
         };
 
+        // Histórico
         window.renderHistorico = async function() {
             const lista = document.getElementById('historicoList');
             const filtro = document.getElementById('filtroTipo').value;
@@ -272,6 +290,7 @@
             lista.innerHTML = html;
         };
 
+        // Cálculos
         function calcularConsumoMedio(abastecimentos) {
             const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
             if (tanquesCheios.length < 2) return 0;
