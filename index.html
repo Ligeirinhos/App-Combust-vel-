@@ -109,10 +109,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <script type="module">
-        // ==================== CONFIGURAÇÃO DO FIREBASE (SUBSTITUA PELAS SUAS CREDENCIAIS) ====================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+        // ==================== SUBSTITUA PELAS SUAS CREDENCIAIS ====================
         const firebaseConfig = {
             apiKey: "COLOQUE_SUA_API_KEY",
             authDomain: "COLOQUE_SEU_DOMINIO.firebaseapp.com",
@@ -121,7 +121,7 @@
             messagingSenderId: "COLOQUE_SEU_SENDER_ID",
             appId: "COLOQUE_SEU_APP_ID"
         };
-        // ==================================================================================================
+        // ==================================================================
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
@@ -142,7 +142,7 @@
             });
         });
 
-        // Formulário dinâmico (com campos na ordem correta e cálculo automático de litros)
+        // Formulário dinâmico
         window.atualizarFormulario = function() {
             const tipo = document.getElementById('tipoRegistro').value;
             const container = document.getElementById('formDinamico');
@@ -179,7 +179,6 @@
             if (dateInput) dateInput.value = hoje;
         };
 
-        // Cálculo automático de litros
         window.calcularLitros = function() {
             const preco = parseFloat(document.getElementById('precoLitro')?.value);
             const valor = parseFloat(document.getElementById('valorAbast')?.value);
@@ -191,7 +190,7 @@
 
         atualizarFormulario();
 
-        // Salvar registro (com depuração via alert)
+        // Salvar com depuração
         window.salvarRegistro = async function() {
             alert('Iniciando salvamento...');
             const tipo = document.getElementById('tipoRegistro').value;
@@ -236,15 +235,19 @@
                 await set(novoRef, dados);
                 alert('Registro salvo com sucesso! ✅');
                 atualizarFormulario();
-                if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+                // Recarrega o dashboard apenas se estiver ativo
+                if (document.getElementById('tab-dashboard').classList.contains('active')) {
+                    carregarDashboard();
+                }
             } catch (error) {
                 alert('❌ Erro ao salvar: ' + error.message);
                 console.error(error);
             }
         };
 
-        // Histórico
+        // Histórico com depuração
         window.renderHistorico = async function() {
+            alert('📋 Carregando histórico...');
             const lista = document.getElementById('historicoList');
             const filtro = document.getElementById('filtroTipo').value;
             lista.innerHTML = '<p class="empty-state">Carregando...</p>';
@@ -263,6 +266,7 @@
             registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
             if (registros.length === 0) {
                 lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
+                alert('Nenhum registro encontrado.');
                 return;
             }
             let html = '';
@@ -288,9 +292,9 @@
                 html += `</div></div>`;
             });
             lista.innerHTML = html;
+            alert(`✅ Histórico carregado com ${registros.length} registros.`);
         };
 
-        // Cálculos
         function calcularConsumoMedio(abastecimentos) {
             const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
             if (tanquesCheios.length < 2) return 0;
@@ -315,12 +319,15 @@
         }
 
         async function carregarDashboard() {
+            alert('🔄 Atualizando dashboard...');
             const abastSnap = await get(query(ref(db, 'abastecimentos'), orderByChild('uid'), equalTo(USER_ID)));
             const despSnap = await get(query(ref(db, 'despesas'), orderByChild('uid'), equalTo(USER_ID)));
             const recSnap = await get(query(ref(db, 'receitas'), orderByChild('uid'), equalTo(USER_ID)));
             const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => abastecimentos.push({ id: d.key, ...d.val() }));
             const despesas = []; if (despSnap.exists()) despSnap.forEach(d => despesas.push({ id: d.key, ...d.val() }));
             const receitas = []; if (recSnap.exists()) recSnap.forEach(d => receitas.push({ id: d.key, ...d.val() }));
+
+            alert(`📊 ${abastecimentos.length} abastecimentos, ${despesas.length} despesas, ${receitas.length} receitas`);
 
             const totalReceitas = receitas.reduce((s, r) => s + Number(r.valor), 0);
             const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0) + abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0);
@@ -393,7 +400,7 @@
             `;
         }
 
-        // Inicializa dashboard
+        // Inicializa o dashboard
         carregarDashboard();
     </script>
 </body>
