@@ -159,7 +159,6 @@
         let chartGastos = null;
         let chartReceitas = null;
         const USER_ID = 'demo-user';
-        // Veículo fixo: Moto
         const VEICULO = 'Moto';
         let categoriasDespesa = [];
         let categoriasReceita = [];
@@ -338,7 +337,6 @@
             if (select && outro) outro.style.display = select.value === 'Outro' ? 'block' : 'none';
         };
 
-        // Inicializa formulário e categorias
         await carregarCategorias();
         atualizarFormulario();
 
@@ -383,7 +381,7 @@
                         data: document.getElementById('data_rec').value,
                         km: Number(document.getElementById('km_rec').value),
                         valor: Number(document.getElementById('valorRec').value),
-                        tipo: tipoReceita
+                        tipo: tipoReceita   // campo 'tipo' armazena o tipo da receita (ex: 'Corrida')
                     };
                 }
                 const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
@@ -398,7 +396,7 @@
             }
         };
 
-        // ========== HISTÓRICO COM EDIÇÃO/EXCLUSÃO ==========
+        // ========== HISTÓRICO COM EDIÇÃO/EXCLUSÃO (CORRIGIDO) ==========
         window.renderHistorico = async function() {
             const lista = document.getElementById('historicoList');
             const filtro = document.getElementById('filtroTipo').value;
@@ -411,8 +409,10 @@
                 if (snap.exists()) {
                     snap.forEach(child => {
                         const dados = child.val();
-                        if (dados.veiculo === VEICULO || !dados.veiculo) { // aceita registros sem veiculo (antigos) como Moto
-                            registros.push({ id: child.key, tipo: col.slice(0, -1), ...dados });
+                        if (dados.veiculo === VEICULO || !dados.veiculo) {
+                            // Cria um campo separado para identificar o tipo de registro (abastecimento/despesa/receita)
+                            const tipoRegistro = col.slice(0, -1); // remove o 's' final
+                            registros.push({ id: child.key, tipoRegistro, ...dados });
                         }
                     });
                 }
@@ -424,33 +424,35 @@
             }
             let html = '';
             registros.forEach(r => {
-                const classe = r.tipo;
+                const classe = r.tipoRegistro; // 'abastecimento', 'despesa', 'receita'
                 html += `<div class="result-item ${classe}" id="item-${r.id}">
                     <div class="result-header">
                         <div class="result-info">
-                            <strong>${r.tipo === 'abastecimento' ? '⛽ Abastecimento' : r.tipo === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
+                            <strong>${r.tipoRegistro === 'abastecimento' ? '⛽ Abastecimento' : r.tipoRegistro === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
                             <span>📅 ${r.data} - Km: ${r.km}</span>
                         </div>
                         <div>
-                            <button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipo}', '${r.id}')">✏️</button>
-                            <button class="btn-outline btn-small" onclick="excluirRegistro('${r.tipo}', '${r.id}')">🗑️</button>
+                            <button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipoRegistro}', '${r.id}')">✏️</button>
+                            <button class="btn-outline btn-small" onclick="excluirRegistro('${r.tipoRegistro}', '${r.id}')">🗑️</button>
                         </div>
                     </div>
                     <div style="margin-top:4px;">`;
-                if (r.tipo === 'abastecimento') {
+                if (r.tipoRegistro === 'abastecimento') {
                     html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
                     if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
-                } else if (r.tipo === 'despesa') {
+                } else if (r.tipoRegistro === 'despesa') {
                     html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
                     if (r.categoria) html += ` (${r.categoria})`;
-                } else if (r.tipo === 'receita') {
-                    html += `🔹 ${r.tipo} - R$ ${Number(r.valor).toFixed(2)}`;
+                } else if (r.tipoRegistro === 'receita') {
+                    // Exibe o tipo da receita (ex: 'Corrida'), valor e km
+                    html += `🔹 ${r.tipo || 'Receita'} - R$ ${Number(r.valor).toFixed(2)} - Km: ${r.km}`;
                 }
                 html += `</div><div id="edit-${r.id}" class="edit-form" style="display:none;"></div></div>`;
             });
             lista.innerHTML = html;
         };
 
+        // Ajuste nas funções editarRegistro e excluirRegistro (já recebem o tipo correto, mas vamos manter a compatibilidade)
         window.editarRegistro = async function(tipo, id) {
             const editDiv = document.getElementById(`edit-${id}`);
             if (editDiv.style.display === 'block') {
@@ -487,14 +489,15 @@
                     <input type="text" id="edit-categoria-outro-${id}" value="${outroValue}" placeholder="Digite a categoria" style="display:${selectedCat === 'Outro' ? 'block' : 'none'}; margin-top:4px;">
                 `;
             } else if (tipo === 'receita') {
-                const selectedTipo = categoriasReceita.includes(dados.tipo) ? dados.tipo : 'Outro';
+                const tiposReceita = categoriasReceita;
+                const selectedTipo = tiposReceita.includes(dados.tipo) ? dados.tipo : 'Outro';
                 const outroValue = selectedTipo === 'Outro' ? dados.tipo || '' : '';
                 formHtml = `
                     <input type="date" id="edit-data-${id}" value="${dados.data}">
                     <input type="number" id="edit-km-${id}" value="${dados.km}" placeholder="Km">
                     <input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}" placeholder="Valor">
                     <select id="edit-tipo-${id}" onchange="toggleEditOutroTipo('${id}')">
-                        ${categoriasReceita.map(t => `<option value="${t}" ${t === selectedTipo ? 'selected' : ''}>${t}</option>`).join('')}
+                        ${tiposReceita.map(t => `<option value="${t}" ${t === selectedTipo ? 'selected' : ''}>${t}</option>`).join('')}
                         <option value="Outro" ${selectedTipo === 'Outro' ? 'selected' : ''}>✏️ Outro</option>
                     </select>
                     <input type="text" id="edit-tipo-outro-${id}" value="${outroValue}" placeholder="Digite o tipo" style="display:${selectedTipo === 'Outro' ? 'block' : 'none'}; margin-top:4px;">
@@ -559,7 +562,7 @@
             if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
         };
 
-        // ========== CÁLCULOS E DASHBOARD ==========
+        // ========== CÁLCULOS E DASHBOARD (mantido) ==========
         function calcularConsumoMedio(abastecimentos) {
             const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
             if (tanquesCheios.length < 2) return 0;
@@ -606,7 +609,6 @@
             }
             document.getElementById('autonomia').textContent = `${autonomia} km`;
 
-            // Gráfico de gastos
             const gastosPorMes = {};
             [...abastecimentos, ...despesas].forEach(r => {
                 const [ano, mes] = r.data.split('-');
@@ -628,7 +630,6 @@
                 });
             }
 
-            // Gráfico de receitas
             const receitasPorMes = {};
             receitas.forEach(r => {
                 const [ano, mes] = r.data.split('-');
@@ -675,7 +676,6 @@
             `;
         }
 
-        // Inicialização final
         carregarDashboard();
     </script>
 </body>
