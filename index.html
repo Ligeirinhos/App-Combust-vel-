@@ -7,22 +7,14 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🏍️%3C/text%3E%3C/svg%3E">
     <meta name="theme-color" content="#000000">
     <style>
-        :root {
-            --bg: #000000;
-            --card: #111111;
-            --primary: #e63946;
-            --secondary: #f4a261;
-            --text: #ffffff;
-            --gold: #ffc107;
-            --border: #333333;
-        }
+        :root { --bg:#000; --card:#111; --primary:#e63946; --secondary:#f4a261; --text:#fff; --gold:#ffc107; --border:#333; }
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:12px; }
         .container { max-width:800px; margin:0 auto; }
         h1 { text-align:center; color:var(--primary); margin-bottom:5px; font-size:1.5em; }
         .subtitle { text-align:center; color:var(--secondary); font-size:0.85em; margin-bottom:12px; }
         .tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
-        .tab { flex:1; padding:8px 6px; background:var(--card); border:2px solid transparent; color:var(--text); cursor:pointer; border-radius:8px; font-size:0.8em; text-align:center; transition:all 0.2s; }
+        .tab { flex:1; padding:8px 6px; background:var(--card); border:2px solid transparent; color:var(--text); cursor:pointer; border-radius:8px; font-size:0.8em; text-align:center; transition:0.2s; }
         .tab.active { border-color:var(--primary); background:var(--primary); color:white; font-weight:bold; }
         .tab-content { display:none; } .tab-content.active { display:block; }
         .card { background:var(--card); border-radius:12px; padding:15px; margin-bottom:12px; border:1px solid var(--border); }
@@ -45,11 +37,14 @@
         .result-item.abastecimento { border-left-color:var(--primary); }
         .result-item.despesa { border-left-color:var(--gold); }
         .result-item.receita { border-left-color:#2ecc71; }
-        .result-header { display:flex; justify-content:space-between; align-items:center; }
+        .result-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
         .result-info strong { color:var(--secondary); display:block; }
         .empty-state { text-align:center; opacity:0.5; padding:15px; }
         .badge { display:inline-block; padding:2px 6px; border-radius:6px; font-size:0.7em; margin-left:4px; }
         .chart-container { width:100%; height:250px; margin-top:12px; }
+        .filter-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; align-items:center; }
+        .filter-row input, .filter-row select { flex:1; min-width:100px; }
+        .total-filtro { text-align:center; font-size:1em; color:var(--gold); margin:8px 0; }
         .edit-form { background:var(--card); padding:12px; border-radius:8px; margin-top:8px; border:1px solid var(--border); }
         .edit-form input, .edit-form select { width:100%; margin:4px 0; }
         .categoria-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); }
@@ -64,14 +59,34 @@
         <p class="subtitle">Controle de abastecimentos, despesas e receitas</p>
 
         <div class="tabs">
-            <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
-            <button class="tab" data-tab="historico">📋 Histórico</button>
+            <button class="tab active" data-tab="historico">📋 Histórico</button>
+            <button class="tab" data-tab="dashboard">📊 Dashboard</button>
             <button class="tab" data-tab="novo">➕ Novo</button>
             <button class="tab" data-tab="lembretes">🔔 Lembretes</button>
             <button class="tab" data-tab="categorias">⚙️ Categorias</button>
         </div>
 
-        <div class="tab-content active" id="tab-dashboard">
+        <!-- Histórico (aba inicial ativa) -->
+        <div class="tab-content active" id="tab-historico">
+            <div class="card">
+                <h2>📋 Registros</h2>
+                <div class="filter-row">
+                    <select id="filtroTipo" onchange="renderHistorico()" style="flex:1; min-width:100px;">
+                        <option value="todos">Todos</option>
+                        <option value="abastecimento">Abastecimentos</option>
+                        <option value="despesa">Despesas</option>
+                        <option value="receita">Receitas</option>
+                    </select>
+                    <input type="text" id="filtroEstabelecimento" placeholder="🏢 Estabelecimento" oninput="renderHistorico()" style="flex:2;">
+                    <input type="date" id="filtroDataInicio" onchange="renderHistorico()" style="flex:1;" title="Data início">
+                    <input type="date" id="filtroDataFim" onchange="renderHistorico()" style="flex:1;" title="Data fim">
+                </div>
+                <div class="total-filtro" id="totalFiltro"></div>
+                <div id="historicoList"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-dashboard">
             <div class="dashboard">
                 <div class="dash-item"><div class="number" id="saldoAtual">R$ 0,00</div><div class="label">Saldo (Receita - Gastos)</div></div>
                 <div class="dash-item"><div class="number" id="custoKm">R$ 0,00</div><div class="label">Custo por km</div></div>
@@ -80,19 +95,6 @@
             </div>
             <div class="card"><h3 style="color:var(--secondary);">Gastos mensais</h3><div class="chart-container"><canvas id="graficoGastos"></canvas></div></div>
             <div class="card"><h3 style="color:var(--secondary);">Receitas mensais</h3><div class="chart-container"><canvas id="graficoReceitas"></canvas></div></div>
-        </div>
-
-        <div class="tab-content" id="tab-historico">
-            <div class="card">
-                <h2>📋 Registros</h2>
-                <select id="filtroTipo" onchange="renderHistorico()" style="margin-bottom:10px; background:var(--bg); color:var(--text); border:1px solid var(--border); padding:6px; border-radius:6px;">
-                    <option value="todos">Todos</option>
-                    <option value="abastecimento">Abastecimentos</option>
-                    <option value="despesa">Despesas</option>
-                    <option value="receita">Receitas</option>
-                </select>
-                <div id="historicoList"></div>
-            </div>
         </div>
 
         <div class="tab-content" id="tab-novo">
@@ -166,28 +168,26 @@
         // ========== CATEGORIAS ==========
         async function carregarCategorias() {
             const snapDesp = await get(ref(db, 'categoriasDespesas'));
-            if (snapDesp.exists()) {
-                categoriasDespesa = Object.values(snapDesp.val());
-            } else {
-                categoriasDespesa = ['Troca de óleo', 'Troca de pneu', 'Mecânico', 'Revisão', 'Seguro'];
-                set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc, cat, i) => { acc[i] = cat; return acc; }, {}));
+            if (snapDesp.exists()) categoriasDespesa = Object.values(snapDesp.val());
+            else {
+                categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro'];
+                set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
             }
             const snapRec = await get(ref(db, 'categoriasReceitas'));
-            if (snapRec.exists()) {
-                categoriasReceita = Object.values(snapRec.val());
-            } else {
-                categoriasReceita = ['Corrida', 'Frete', 'Aplicativo', 'Bônus'];
-                set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc, cat, i) => { acc[i] = cat; return acc; }, {}));
+            if (snapRec.exists()) categoriasReceita = Object.values(snapRec.val());
+            else {
+                categoriasReceita = ['Corrida','Frete','Aplicativo','Bônus'];
+                set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
             }
             renderizarListaCategorias();
         }
 
         function salvarCategoriasDespesa() {
-            set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc, cat, i) => { acc[i] = cat; return acc; }, {}));
+            set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
         }
 
         function salvarCategoriasReceita() {
-            set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc, cat, i) => { acc[i] = cat; return acc; }, {}));
+            set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
         }
 
         function renderizarListaCategorias() {
@@ -245,8 +245,8 @@
             }
         });
 
-        document.getElementById('novaCatDespesa').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnAddCatDespesa').click(); });
-        document.getElementById('novaCatReceita').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnAddCatReceita').click(); });
+        document.getElementById('novaCatDespesa').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatDespesa').click(); });
+        document.getElementById('novaCatReceita').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatReceita').click(); });
 
         // ========== NAVEGAÇÃO ==========
         document.querySelectorAll('.tab').forEach(tab => {
@@ -270,7 +270,7 @@
             let html = '';
             if (tipo === 'abastecimento') {
                 html = `
-                    <div class="form-group"><label>Data</label><input type="date" id="data_abast" required></div>
+                    <div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_abast" required></div>
                     <div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div>
                     <div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" required oninput="calcularLitros()"></div>
                     <div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" required oninput="calcularLitros()"></div>
@@ -281,37 +281,38 @@
             } else if (tipo === 'despesa') {
                 const options = categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
                 html = `
-                    <div class="form-group"><label>Data</label><input type="date" id="data_desp" required></div>
+                    <div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_desp" required></div>
                     <div class="form-group"><label>Km</label><input type="number" id="km_desp" required></div>
                     <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div>
                     <div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div>
                     <div class="form-group">
                         <label>Categoria</label>
-                        <select id="categoriaSelect" onchange="toggleCategoriaOutro()">
-                            ${options}
-                        </select>
+                        <select id="categoriaSelect" onchange="toggleCategoriaOutro()">${options}</select>
                         <input type="text" id="categoriaOutro" placeholder="Digite a categoria" style="display:none; margin-top:4px;">
                     </div>
                 `;
             } else if (tipo === 'receita') {
                 const options = categoriasReceita.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
                 html = `
-                    <div class="form-group"><label>Data</label><input type="date" id="data_rec" required></div>
+                    <div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_rec" required></div>
                     <div class="form-group"><label>Km</label><input type="number" id="km_rec" required></div>
                     <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorRec" required></div>
                     <div class="form-group">
                         <label>Tipo</label>
-                        <select id="tipoReceitaSelect" onchange="toggleTipoOutro()">
-                            ${options}
-                        </select>
+                        <select id="tipoReceitaSelect" onchange="toggleTipoOutro()">${options}</select>
                         <input type="text" id="tipoReceitaOutro" placeholder="Digite o tipo" style="display:none; margin-top:4px;">
                     </div>
+                    <div class="form-group"><label>🏢 Estabelecimento</label><input type="text" id="estabelecimento" placeholder="Ex: iFood, Cacau Show"></div>
                 `;
             }
             container.innerHTML = html;
-            const hoje = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-');
-            const dateInput = document.querySelector('#formDinamico input[type="date"]');
-            if (dateInput) dateInput.value = hoje;
+            // Preenche data/hora atual no fuso local
+            const agora = new Date();
+            const offset = agora.getTimezoneOffset();
+            const local = new Date(agora.getTime() - offset * 60000);
+            const valorData = local.toISOString().slice(0,16);
+            const dateInput = document.querySelector('#formDinamico input[type="datetime-local"]');
+            if (dateInput) dateInput.value = valorData;
             if (tipo === 'despesa') toggleCategoriaOutro();
             if (tipo === 'receita') toggleTipoOutro();
         };
@@ -320,9 +321,7 @@
             const preco = parseFloat(document.getElementById('precoLitro')?.value);
             const valor = parseFloat(document.getElementById('valorAbast')?.value);
             const litrosInput = document.getElementById('litros');
-            if (litrosInput && preco > 0 && valor > 0) {
-                litrosInput.value = (valor / preco).toFixed(2);
-            }
+            if (litrosInput && preco > 0 && valor > 0) litrosInput.value = (valor / preco).toFixed(2);
         };
 
         window.toggleCategoriaOutro = function() {
@@ -337,6 +336,7 @@
             if (select && outro) outro.style.display = select.value === 'Outro' ? 'block' : 'none';
         };
 
+        // Inicializa categorias e formulário
         await carregarCategorias();
         atualizarFormulario();
 
@@ -381,7 +381,8 @@
                         data: document.getElementById('data_rec').value,
                         km: Number(document.getElementById('km_rec').value),
                         valor: Number(document.getElementById('valorRec').value),
-                        tipo: tipoReceita   // campo 'tipo' armazena o tipo da receita (ex: 'Corrida')
+                        tipo: tipoReceita,
+                        estabelecimento: document.getElementById('estabelecimento').value
                     };
                 }
                 const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
@@ -389,6 +390,8 @@
                 await set(novoRef, dados);
                 alert('✅ Registro salvo!');
                 atualizarFormulario();
+                // Recarrega a aba ativa
+                if (document.getElementById('tab-historico').classList.contains('active')) renderHistorico();
                 if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
             } catch (error) {
                 alert('❌ Erro ao salvar: ' + error.message);
@@ -396,40 +399,60 @@
             }
         };
 
-        // ========== HISTÓRICO COM EDIÇÃO/EXCLUSÃO (CORRIGIDO) ==========
+        // ========== HISTÓRICO COM FILTROS ==========
         window.renderHistorico = async function() {
             const lista = document.getElementById('historicoList');
-            const filtro = document.getElementById('filtroTipo').value;
+            const filtroTipo = document.getElementById('filtroTipo').value;
+            const filtroEstab = document.getElementById('filtroEstabelecimento').value.trim().toLowerCase();
+            const dataInicio = document.getElementById('filtroDataInicio').value;
+            const dataFim = document.getElementById('filtroDataFim').value;
+            const totalDiv = document.getElementById('totalFiltro');
             lista.innerHTML = '<p class="empty-state">Carregando...</p>';
             const colecoes = ['abastecimentos', 'despesas', 'receitas'];
             let registros = [];
             for (const col of colecoes) {
-                if (filtro !== 'todos' && col !== filtro + 's') continue;
+                if (filtroTipo !== 'todos' && col !== filtroTipo + 's') continue;
                 const snap = await get(ref(db, col));
                 if (snap.exists()) {
                     snap.forEach(child => {
                         const dados = child.val();
                         if (dados.veiculo === VEICULO || !dados.veiculo) {
-                            // Cria um campo separado para identificar o tipo de registro (abastecimento/despesa/receita)
-                            const tipoRegistro = col.slice(0, -1); // remove o 's' final
-                            registros.push({ id: child.key, tipoRegistro, ...dados });
+                            // Filtro por estabelecimento (apenas para receitas)
+                            if (filtroEstab && col === 'receitas') {
+                                const estab = (dados.estabelecimento || '').toLowerCase();
+                                if (!estab.includes(filtroEstab)) return;
+                            }
+                            // Filtro por data
+                            const dataRegistro = dados.data ? dados.data.slice(0,10) : '';
+                            if (dataInicio && dataRegistro < dataInicio) return;
+                            if (dataFim && dataRegistro > dataFim) return;
+                            registros.push({ id: child.key, tipoRegistro: col.slice(0,-1), ...dados });
                         }
                     });
                 }
             }
             registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
+            // Calcula total
+            let totalFiltrado = 0;
+            registros.forEach(r => {
+                if (r.tipoRegistro === 'abastecimento') totalFiltrado += Number(r.valor_total);
+                else totalFiltrado += Number(r.valor || 0);
+            });
+            totalDiv.textContent = registros.length > 0 ? `Total: R$ ${totalFiltrado.toFixed(2)} (${registros.length} registros)` : '';
             if (registros.length === 0) {
                 lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
                 return;
             }
             let html = '';
             registros.forEach(r => {
-                const classe = r.tipoRegistro; // 'abastecimento', 'despesa', 'receita'
+                const classe = r.tipoRegistro;
+                const dataFormatada = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
                 html += `<div class="result-item ${classe}" id="item-${r.id}">
                     <div class="result-header">
                         <div class="result-info">
                             <strong>${r.tipoRegistro === 'abastecimento' ? '⛽ Abastecimento' : r.tipoRegistro === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
-                            <span>📅 ${r.data} - Km: ${r.km}</span>
+                            <span>📅 ${dataFormatada} - Km: ${r.km}</span>
+                            ${r.estabelecimento ? `<span>🏢 ${r.estabelecimento}</span>` : ''}
                         </div>
                         <div>
                             <button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipoRegistro}', '${r.id}')">✏️</button>
@@ -444,15 +467,16 @@
                     html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
                     if (r.categoria) html += ` (${r.categoria})`;
                 } else if (r.tipoRegistro === 'receita') {
-                    // Exibe o tipo da receita (ex: 'Corrida'), valor e km
-                    html += `🔹 ${r.tipo || 'Receita'} - R$ ${Number(r.valor).toFixed(2)} - Km: ${r.km}`;
+                    html += `🔹 ${r.tipo || 'Receita'} - R$ ${Number(r.valor).toFixed(2)}`;
+                    html += ` - Km: ${r.km}`;
+                    if (r.estabelecimento) html += ` - 🏢 ${r.estabelecimento}`;
                 }
                 html += `</div><div id="edit-${r.id}" class="edit-form" style="display:none;"></div></div>`;
             });
             lista.innerHTML = html;
         };
 
-        // Ajuste nas funções editarRegistro e excluirRegistro (já recebem o tipo correto, mas vamos manter a compatibilidade)
+        // ========== EDITAR REGISTRO ==========
         window.editarRegistro = async function(tipo, id) {
             const editDiv = document.getElementById(`edit-${id}`);
             if (editDiv.style.display === 'block') {
@@ -466,7 +490,7 @@
             let formHtml = '';
             if (tipo === 'abastecimento') {
                 formHtml = `
-                    <input type="date" id="edit-data-${id}" value="${dados.data}">
+                    <input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}">
                     <input type="number" id="edit-km-${id}" value="${dados.km}" placeholder="Km">
                     <input type="number" step="0.001" id="edit-preco-${id}" value="${dados.preco_litro}" placeholder="Preço/L">
                     <input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor_total}" placeholder="Valor total">
@@ -478,7 +502,7 @@
                 const selectedCat = categoriasDespesa.includes(dados.categoria) ? dados.categoria : 'Outro';
                 const outroValue = selectedCat === 'Outro' ? dados.categoria || '' : '';
                 formHtml = `
-                    <input type="date" id="edit-data-${id}" value="${dados.data}">
+                    <input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}">
                     <input type="number" id="edit-km-${id}" value="${dados.km}" placeholder="Km">
                     <input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}" placeholder="Valor">
                     <input type="text" id="edit-descricao-${id}" value="${dados.descricao || ''}" placeholder="Descrição">
@@ -489,18 +513,18 @@
                     <input type="text" id="edit-categoria-outro-${id}" value="${outroValue}" placeholder="Digite a categoria" style="display:${selectedCat === 'Outro' ? 'block' : 'none'}; margin-top:4px;">
                 `;
             } else if (tipo === 'receita') {
-                const tiposReceita = categoriasReceita;
-                const selectedTipo = tiposReceita.includes(dados.tipo) ? dados.tipo : 'Outro';
-                const outroValue = selectedTipo === 'Outro' ? dados.tipo || '' : '';
+                const selectedTipo = categoriasReceita.includes(dados.tipo) ? dados.tipo : 'Outro';
+                const outroTipoValue = selectedTipo === 'Outro' ? dados.tipo || '' : '';
                 formHtml = `
-                    <input type="date" id="edit-data-${id}" value="${dados.data}">
+                    <input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}">
                     <input type="number" id="edit-km-${id}" value="${dados.km}" placeholder="Km">
                     <input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}" placeholder="Valor">
                     <select id="edit-tipo-${id}" onchange="toggleEditOutroTipo('${id}')">
-                        ${tiposReceita.map(t => `<option value="${t}" ${t === selectedTipo ? 'selected' : ''}>${t}</option>`).join('')}
+                        ${categoriasReceita.map(t => `<option value="${t}" ${t === selectedTipo ? 'selected' : ''}>${t}</option>`).join('')}
                         <option value="Outro" ${selectedTipo === 'Outro' ? 'selected' : ''}>✏️ Outro</option>
                     </select>
-                    <input type="text" id="edit-tipo-outro-${id}" value="${outroValue}" placeholder="Digite o tipo" style="display:${selectedTipo === 'Outro' ? 'block' : 'none'}; margin-top:4px;">
+                    <input type="text" id="edit-tipo-outro-${id}" value="${outroTipoValue}" placeholder="Digite o tipo" style="display:${selectedTipo === 'Outro' ? 'block' : 'none'}; margin-top:4px;">
+                    <input type="text" id="edit-estabelecimento-${id}" value="${dados.estabelecimento || ''}" placeholder="Estabelecimento">
                 `;
             }
             formHtml += `<br><button class="btn-primary btn-small" onclick="salvarEdicao('${tipo}', '${id}')">💾 Salvar</button>`;
@@ -546,6 +570,7 @@
                 const tipoSelect = document.getElementById(`edit-tipo-${id}`);
                 const tipoOutro = document.getElementById(`edit-tipo-outro-${id}`);
                 atualizacoes['tipo'] = tipoSelect.value === 'Outro' ? tipoOutro.value : tipoSelect.value;
+                atualizacoes['estabelecimento'] = document.getElementById(`edit-estabelecimento-${id}`).value;
             }
             await update(ref(db, `${colecao}/${id}`), atualizacoes);
             alert('✅ Alterações salvas!');
@@ -562,7 +587,7 @@
             if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
         };
 
-        // ========== CÁLCULOS E DASHBOARD (mantido) ==========
+        // ========== CÁLCULOS E DASHBOARD ==========
         function calcularConsumoMedio(abastecimentos) {
             const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
             if (tanquesCheios.length < 2) return 0;
@@ -609,9 +634,10 @@
             }
             document.getElementById('autonomia').textContent = `${autonomia} km`;
 
+            // Gráfico de gastos
             const gastosPorMes = {};
             [...abastecimentos, ...despesas].forEach(r => {
-                const [ano, mes] = r.data.split('-');
+                const [ano, mes] = r.data ? r.data.slice(0,10).split('-') : ['',''];
                 const mesAno = `${mes}/${ano}`;
                 const valor = r.valor_total || r.valor || 0;
                 gastosPorMes[mesAno] = (gastosPorMes[mesAno] || 0) + Number(valor);
@@ -630,9 +656,10 @@
                 });
             }
 
+            // Gráfico de receitas
             const receitasPorMes = {};
             receitas.forEach(r => {
-                const [ano, mes] = r.data.split('-');
+                const [ano, mes] = r.data ? r.data.slice(0,10).split('-') : ['',''];
                 const mesAno = `${mes}/${ano}`;
                 const valor = r.valor || 0;
                 receitasPorMes[mesAno] = (receitasPorMes[mesAno] || 0) + Number(valor);
@@ -676,7 +703,9 @@
             `;
         }
 
-        carregarDashboard();
+        // ========== INICIALIZAÇÃO ==========
+        // A aba ativa inicial é "Histórico" (definido no HTML), portanto renderizamos o histórico
+        renderHistorico();
     </script>
 </body>
 </html>
