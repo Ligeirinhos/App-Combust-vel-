@@ -217,6 +217,7 @@
         const mainScreen = document.getElementById('mainScreen');
         const authError = document.getElementById('authError');
 
+        // ========== AUTENTICAÇÃO ==========
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
@@ -227,8 +228,6 @@
                 authScreen.style.display = 'block';
                 mainScreen.style.display = 'none';
             }
-        }, (error) => {
-            alert('Erro na autenticação: ' + error.message);
         });
 
         document.getElementById('btnLogin').addEventListener('click', async () => {
@@ -254,9 +253,14 @@
 
         document.getElementById('btnLogout').addEventListener('click', () => signOut(auth));
 
+        // ========== INICIAR APÓS LOGIN ==========
         async function iniciarApp() {
             await carregarCategorias();
             renderHistorico();
+            configurarAbas();
+        }
+
+        function configurarAbas() {
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.addEventListener('click', () => {
                     const tabName = tab.dataset.tab;
@@ -273,146 +277,415 @@
             });
         }
 
-        // ... (funções de categorias, formulário, salvar, histórico, editar/excluir permanecem iguais às do último código completo funcional que você tinha)
-        // Como a conversa está longa, vou colocar apenas a função carregarDashboard com depuração. As outras funções você já tem.
-
-        // ========== DASHBOARD COM DEPURAÇÃO ==========
-        async function carregarDashboard() {
-            alert('1. Iniciando dashboard...');
-            if (!currentUser) {
-                alert('Erro: usuário não autenticado.');
-                return;
+        // ========== CATEGORIAS ==========
+        async function carregarCategorias() {
+            const snapDesp = await get(ref(db, 'categoriasDespesas'));
+            if (snapDesp.exists()) categoriasDespesa = Object.values(snapDesp.val());
+            else {
+                categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro'];
+                await set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
             }
-            alert('2. UID: ' + currentUser.uid);
-            try {
-                alert('3. Buscando dados...');
-                const [abastSnap, despSnap, recSnap] = await Promise.all([
-                    get(ref(db, 'abastecimentos')),
-                    get(ref(db, 'despesas')),
-                    get(ref(db, 'receitas'))
-                ]);
-                alert('4. Dados recebidos.');
+            categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-                const abastecimentos = []; 
-                if (abastSnap.exists()) {
-                    abastSnap.forEach(d => {
-                        const val = d.val();
-                        if (val.uid === currentUser.uid && (val.veiculo === VEICULO || !val.veiculo)) abastecimentos.push(val);
-                    });
-                }
-                alert('5. Abastecimentos: ' + abastecimentos.length);
-
-                const despesas = []; 
-                if (despSnap.exists()) {
-                    despSnap.forEach(d => {
-                        const val = d.val();
-                        if (val.uid === currentUser.uid && (val.veiculo === VEICULO || !val.veiculo)) despesas.push(val);
-                    });
-                }
-                alert('6. Despesas: ' + despesas.length);
-
-                const receitas = []; 
-                if (recSnap.exists()) {
-                    recSnap.forEach(d => {
-                        const val = d.val();
-                        if (val.uid === currentUser.uid && (val.veiculo === VEICULO || !val.veiculo)) receitas.push(val);
-                    });
-                }
-                alert('7. Receitas: ' + receitas.length);
-
-                // Cálculos
-                const totalReceitas = receitas.reduce((s, r) => s + Number(r.valor), 0);
-                const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0) + abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0);
-                document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
-
-                const todosGastos = [...abastecimentos, ...despesas];
-                const kms = todosGastos.map(r => r.km).filter(km => !isNaN(km));
-                const custoKm = kms.length >= 2 ? (totalDespesas / (Math.max(...kms) - Math.min(...kms))) : 0;
-                document.getElementById('custoKm').textContent = `R$ ${custoKm.toFixed(2)}`;
-
-                let consumoMedio = 0;
-                const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
-                if (tanquesCheios.length >= 2) {
-                    tanquesCheios.sort((a, b) => new Date(a.data) - new Date(b.data));
-                    const ultimo = tanquesCheios[tanquesCheios.length - 1];
-                    const penultimo = tanquesCheios[tanquesCheios.length - 2];
-                    const kmPercorridos = ultimo.km - penultimo.km;
-                    if (kmPercorridos > 0) {
-                        const entre = abastecimentos.filter(a => {
-                            const d = new Date(a.data);
-                            return d > new Date(penultimo.data) && d <= new Date(ultimo.data);
-                        });
-                        const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
-                        consumoMedio = totalLitros > 0 ? kmPercorridos / totalLitros : 0;
-                    }
-                }
-                document.getElementById('consumoMedio').textContent = `${consumoMedio.toFixed(2)} km/l`;
-
-                let autonomia = 0;
-                if (consumoMedio > 0 && abastecimentos.length > 0) {
-                    const ultimoAbast = abastecimentos.reduce((a, b) => new Date(a.data) > new Date(b.data) ? a : b);
-                    if (ultimoAbast.tanque_cheio) autonomia = Math.round(consumoMedio * ultimoAbast.litros);
-                }
-                document.getElementById('autonomia').textContent = `${autonomia} km`;
-
-                // Função de períodos (mantida igual)
-                function getPeriodos(dataStr) {
-                    const agora = new Date();
-                    const data = new Date(dataStr);
-                    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-                    const dataSemHora = new Date(data.getFullYear(), data.getMonth(), data.getDate());
-                    const dia = dataSemHora.getTime() === hoje.getTime();
-                    const diaSemana = agora.getDay();
-                    const inicioSemana = new Date(hoje);
-                    inicioSemana.setDate(hoje.getDate() - ((diaSemana + 6) % 7));
-                    const fimSemana = new Date(inicioSemana);
-                    fimSemana.setDate(inicioSemana.getDate() + 6);
-                    const semana = dataSemHora >= inicioSemana && dataSemHora <= fimSemana;
-                    const mes = data.getMonth() === agora.getMonth() && data.getFullYear() === agora.getFullYear();
-                    const ano = data.getFullYear() === agora.getFullYear();
-                    return { dia, semana, mes, ano };
-                }
-
-                function calcularTotais(registros) {
-                    const totais = { dia: 0, semana: 0, mes: 0, ano: 0 };
-                    registros.forEach(r => {
-                        if (!r.data) return;
-                        const periodos = getPeriodos(r.data);
-                        const valor = r.valor || r.valor_total || 0;
-                        if (periodos.dia) totais.dia += Number(valor);
-                        if (periodos.semana) totais.semana += Number(valor);
-                        if (periodos.mes) totais.mes += Number(valor);
-                        if (periodos.ano) totais.ano += Number(valor);
-                    });
-                    return totais;
-                }
-
-                const ganhos = calcularTotais(receitas);
-                const gastos = calcularTotais([...abastecimentos, ...despesas]);
-
-                document.getElementById('ganhoDia').textContent = `R$ ${ganhos.dia.toFixed(2)}`;
-                document.getElementById('ganhoSemana').textContent = `R$ ${ganhos.semana.toFixed(2)}`;
-                document.getElementById('ganhoMes').textContent = `R$ ${ganhos.mes.toFixed(2)}`;
-                document.getElementById('ganhoAno').textContent = `R$ ${ganhos.ano.toFixed(2)}`;
-
-                document.getElementById('gastoDia').textContent = `R$ ${gastos.dia.toFixed(2)}`;
-                document.getElementById('gastoSemana').textContent = `R$ ${gastos.semana.toFixed(2)}`;
-                document.getElementById('gastoMes').textContent = `R$ ${gastos.mes.toFixed(2)}`;
-                document.getElementById('gastoAno').textContent = `R$ ${gastos.ano.toFixed(2)}`;
-
-                document.getElementById('saldoDia').textContent = `R$ ${(ganhos.dia - gastos.dia).toFixed(2)}`;
-                document.getElementById('saldoSemana').textContent = `R$ ${(ganhos.semana - gastos.semana).toFixed(2)}`;
-                document.getElementById('saldoMes').textContent = `R$ ${(ganhos.mes - gastos.mes).toFixed(2)}`;
-                document.getElementById('saldoAno').textContent = `R$ ${(ganhos.ano - gastos.ano).toFixed(2)}`;
-
-                alert('8. Dashboard atualizado!');
-            } catch (error) {
-                alert('Erro no dashboard: ' + error.message);
+            const snapRec = await get(ref(db, 'categoriasReceitas'));
+            if (snapRec.exists()) categoriasReceita = Object.values(snapRec.val());
+            else {
+                categoriasReceita = ['Cacau Show','iFood','Insalata','Ligeirinho\'s','Particular'];
+                await set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
             }
+            categoriasReceita.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            renderizarListaCategorias();
         }
 
-        // As demais funções (categorias, formulário, salvar, histórico, editar/excluir, lembretes) devem ser incluídas aqui exatamente como estavam no último código funcional.
-        // Como é muito código para colar em uma resposta, se você precisar, me peça que envio o arquivo completo por algum meio.
+        function salvarCategoriasDespesa() {
+            categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+        }
+
+        function salvarCategoriasReceita() {
+            categoriasReceita.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+        }
+
+        function renderizarListaCategorias() {
+            const listaDesp = document.getElementById('listaCategoriasDespesa');
+            const listaRec = document.getElementById('listaCategoriasReceita');
+            if (!listaDesp || !listaRec) return;
+            listaDesp.innerHTML = categoriasDespesa.map(cat => `
+                <div class="categoria-item"><span>${cat}</span><button class="btn-delete-cat" data-categoria="${cat}" data-tipo="despesa">❌</button></div>
+            `).join('');
+            listaRec.innerHTML = categoriasReceita.map(cat => `
+                <div class="categoria-item"><span>${cat}</span><button class="btn-delete-cat" data-categoria="${cat}" data-tipo="receita">❌</button></div>
+            `).join('');
+
+            document.querySelectorAll('.btn-delete-cat').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const cat = btn.dataset.categoria;
+                    const tipo = btn.dataset.tipo;
+                    if (tipo === 'despesa') { categoriasDespesa = categoriasDespesa.filter(c => c !== cat); salvarCategoriasDespesa(); }
+                    else { categoriasReceita = categoriasReceita.filter(c => c !== cat); salvarCategoriasReceita(); }
+                    renderizarListaCategorias();
+                });
+            });
+        }
+
+        document.getElementById('btnAddCatDespesa').addEventListener('click', () => {
+            const input = document.getElementById('novaCatDespesa');
+            const nova = input.value.trim();
+            if (nova && !categoriasDespesa.includes(nova)) {
+                categoriasDespesa.push(nova); salvarCategoriasDespesa(); renderizarListaCategorias(); input.value = '';
+                if (document.getElementById('tab-novo').classList.contains('active')) atualizarFormulario();
+            }
+        });
+
+        document.getElementById('btnAddCatReceita').addEventListener('click', () => {
+            const input = document.getElementById('novaCatReceita');
+            const nova = input.value.trim();
+            if (nova && !categoriasReceita.includes(nova)) {
+                categoriasReceita.push(nova); salvarCategoriasReceita(); renderizarListaCategorias(); input.value = '';
+                if (document.getElementById('tab-novo').classList.contains('active')) atualizarFormulario();
+            }
+        });
+
+        document.getElementById('novaCatDespesa').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatDespesa').click(); });
+        document.getElementById('novaCatReceita').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatReceita').click(); });
+
+        // ========== FORMULÁRIO ==========
+        window.atualizarFormulario = function() {
+            const tipo = document.getElementById('tipoRegistro').value;
+            const container = document.getElementById('formDinamico');
+            let html = '';
+            if (tipo === 'abastecimento') {
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_abast" required></div>
+                        <div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div>
+                        <div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" required oninput="calcularLitros()"></div>
+                        <div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" required oninput="calcularLitros()"></div>
+                        <div class="form-group"><label>Litros (automático)</label><input type="number" step="0.01" id="litros" readonly></div>
+                        <div class="form-group"><label>Posto</label><input type="text" id="posto"></div>
+                        <div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>`;
+            } else if (tipo === 'despesa') {
+                const opts = categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_desp" required></div>
+                        <div class="form-group"><label>Km</label><input type="number" id="km_desp" required></div>
+                        <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div>
+                        <div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div>
+                        <div class="form-group"><label>Categoria</label><select id="categoriaSelect" onchange="toggleCategoriaOutro()">${opts}</select><input type="text" id="categoriaOutro" placeholder="Digite a categoria" style="display:none; margin-top:4px;"></div>`;
+            } else if (tipo === 'receita') {
+                const opts = categoriasReceita.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_rec" required></div>
+                        <div class="form-group"><label>Km</label><input type="number" id="km_rec" required></div>
+                        <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorRec" required></div>
+                        <div class="form-group"><label>🏢 Estabelecimento</label><select id="tipoReceitaSelect" onchange="toggleTipoOutro()">${opts}</select><input type="text" id="tipoReceitaOutro" placeholder="Digite o nome" style="display:none; margin-top:4px;"></div>`;
+            }
+            container.innerHTML = html;
+            const agora = new Date();
+            const offset = agora.getTimezoneOffset();
+            const local = new Date(agora.getTime() - offset * 60000);
+            const valorData = local.toISOString().slice(0,16);
+            const dateInput = document.querySelector('#formDinamico input[type="datetime-local"]');
+            if (dateInput) dateInput.value = valorData;
+            if (tipo === 'despesa') toggleCategoriaOutro();
+            if (tipo === 'receita') toggleTipoOutro();
+        };
+
+        window.calcularLitros = function() {
+            const preco = parseFloat(document.getElementById('precoLitro')?.value);
+            const valor = parseFloat(document.getElementById('valorAbast')?.value);
+            const litrosInput = document.getElementById('litros');
+            if (litrosInput && preco > 0 && valor > 0) litrosInput.value = (valor / preco).toFixed(2);
+        };
+        window.toggleCategoriaOutro = function() {
+            const sel = document.getElementById('categoriaSelect');
+            const outro = document.getElementById('categoriaOutro');
+            if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
+        };
+        window.toggleTipoOutro = function() {
+            const sel = document.getElementById('tipoReceitaSelect');
+            const outro = document.getElementById('tipoReceitaOutro');
+            if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
+        };
+
+        // ========== SALVAR ==========
+        window.salvarRegistro = async function() {
+            if (!currentUser) return alert('Faça login primeiro.');
+            const tipo = document.getElementById('tipoRegistro').value;
+            let dados = { uid: currentUser.uid, veiculo: VEICULO };
+            try {
+                if (tipo === 'abastecimento') {
+                    const precoLitro = document.getElementById('precoLitro');
+                    const valorTotal = document.getElementById('valorAbast');
+                    const litros = document.getElementById('litros');
+                    if (!precoLitro || !valorTotal || !litros) throw new Error('Campos do abastecimento não encontrados.');
+                    dados = { ...dados, data: document.getElementById('data_abast').value, km: Number(document.getElementById('km_abast').value), litros: Number(litros.value), valor_total: Number(valorTotal.value), preco_litro: Number(precoLitro.value), posto: document.getElementById('posto').value, tanque_cheio: document.getElementById('tanqueCheio').checked };
+                } else if (tipo === 'despesa') {
+                    const catSelect = document.getElementById('categoriaSelect');
+                    const catOutro = document.getElementById('categoriaOutro');
+                    const categoria = catSelect.value === 'Outro' ? catOutro.value : catSelect.value;
+                    dados = { ...dados, data: document.getElementById('data_desp').value, km: Number(document.getElementById('km_desp').value), valor: Number(document.getElementById('valorDesp').value), descricao: document.getElementById('descricao').value, categoria: categoria };
+                } else if (tipo === 'receita') {
+                    const tipoSelect = document.getElementById('tipoReceitaSelect');
+                    const tipoOutro = document.getElementById('tipoReceitaOutro');
+                    const estabelecimento = tipoSelect.value === 'Outro' ? tipoOutro.value : tipoSelect.value;
+                    dados = { ...dados, data: document.getElementById('data_rec').value, km: Number(document.getElementById('km_rec').value), valor: Number(document.getElementById('valorRec').value), tipo: estabelecimento };
+                }
+                const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
+                await set(push(ref(db, colecao)), dados);
+                alert('✅ Registro salvo!');
+                atualizarFormulario();
+                if (document.getElementById('tab-historico').classList.contains('active')) renderHistorico();
+                if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+            } catch (error) {
+                alert('❌ Erro ao salvar: ' + error.message);
+            }
+        };
+
+        // ========== HISTÓRICO ==========
+        window.renderHistorico = async function() {
+            if (!currentUser) return;
+            const lista = document.getElementById('historicoList');
+            const filtroTipo = document.getElementById('filtroTipo').value;
+            const filtroEstab = document.getElementById('filtroEstabelecimento').value.trim().toLowerCase();
+            const dataInicio = document.getElementById('filtroDataInicio').value;
+            const dataFim = document.getElementById('filtroDataFim').value;
+            const totalDiv = document.getElementById('totalFiltro');
+            lista.innerHTML = '<p class="empty-state">Carregando...</p>';
+            const colecoes = ['abastecimentos', 'despesas', 'receitas'];
+            let registros = [];
+            for (const col of colecoes) {
+                if (filtroTipo !== 'todos' && col !== filtroTipo + 's') continue;
+                const snap = await get(ref(db, col));
+                if (snap.exists()) {
+                    snap.forEach(child => {
+                        const dados = child.val();
+                        if (dados.uid !== currentUser.uid) return;
+                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        if (filtroEstab && col === 'receitas') {
+                            const tipo = (dados.tipo || '').toLowerCase();
+                            if (!tipo.includes(filtroEstab)) return;
+                        }
+                        const dataRegistro = dados.data ? dados.data.slice(0,10) : '';
+                        if (dataInicio && dataRegistro < dataInicio) return;
+                        if (dataFim && dataRegistro > dataFim) return;
+                        registros.push({ id: child.key, tipoRegistro: col.slice(0,-1), ...dados });
+                    });
+                }
+            }
+            registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
+            let totalFiltrado = 0;
+            registros.forEach(r => { totalFiltrado += r.tipoRegistro === 'abastecimento' ? Number(r.valor_total) : Number(r.valor || 0); });
+            totalDiv.textContent = registros.length ? `Total: R$ ${totalFiltrado.toFixed(2)} (${registros.length} registros)` : '';
+            if (!registros.length) { lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>'; return; }
+            let html = '';
+            registros.forEach(r => {
+                const classe = r.tipoRegistro;
+                const dataFmt = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
+                html += `<div class="result-item ${classe}" id="item-${r.id}"><div class="result-header"><div class="result-info"><strong>${r.tipoRegistro === 'abastecimento' ? '⛽ Abastecimento' : r.tipoRegistro === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong><span>📅 ${dataFmt} - Km: ${r.km}</span></div><div><button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipoRegistro}', '${r.id}')">✏️</button><button class="btn-outline btn-small" onclick="excluirRegistro('${r.tipoRegistro}', '${r.id}')">🗑️</button></div></div><div style="margin-top:4px;">`;
+                if (r.tipoRegistro === 'abastecimento') {
+                    html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
+                    if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
+                } else if (r.tipoRegistro === 'despesa') {
+                    html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
+                    if (r.categoria) html += ` (${r.categoria})`;
+                } else if (r.tipoRegistro === 'receita') {
+                    html += `🏢 <strong>${r.tipo || 'Receita'}</strong> - R$ ${Number(r.valor).toFixed(2)} - Km: ${r.km}`;
+                }
+                html += `</div><div id="edit-${r.id}" class="edit-form" style="display:none;"></div></div>`;
+            });
+            lista.innerHTML = html;
+        };
+
+        // ========== EDITAR / EXCLUIR ==========
+        window.editarRegistro = async function(tipo, id) {
+            const editDiv = document.getElementById(`edit-${id}`);
+            if (editDiv.style.display === 'block') { editDiv.style.display = 'none'; return; }
+            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
+            const snap = await get(ref(db, `${colecao}/${id}`));
+            if (!snap.exists()) return;
+            const dados = snap.val();
+            if (dados.uid !== currentUser.uid) { alert('Acesso negado.'); return; }
+            let formHtml = '';
+            if (tipo === 'abastecimento') {
+                formHtml = `<input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}"><input type="number" id="edit-km-${id}" value="${dados.km}"><input type="number" step="0.001" id="edit-preco-${id}" value="${dados.preco_litro}"><input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor_total}"><input type="number" step="0.01" id="edit-litros-${id}" value="${dados.litros}"><input type="text" id="edit-posto-${id}" value="${dados.posto || ''}"><label><input type="checkbox" id="edit-tanque-${id}" ${dados.tanque_cheio?'checked':''}> Tanque cheio?</label>`;
+            } else if (tipo === 'despesa') {
+                const selectedCat = categoriasDespesa.includes(dados.categoria) ? dados.categoria : 'Outro';
+                const outroValue = selectedCat === 'Outro' ? dados.categoria || '' : '';
+                formHtml = `<input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}"><input type="number" id="edit-km-${id}" value="${dados.km}"><input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}"><input type="text" id="edit-descricao-${id}" value="${dados.descricao || ''}"><select id="edit-categoria-${id}" onchange="toggleEditOutro('${id}')">${categoriasDespesa.map(c => `<option value="${c}" ${c===selectedCat?'selected':''}>${c}</option>`).join('')}<option value="Outro" ${selectedCat==='Outro'?'selected':''}>✏️ Outro</option></select><input type="text" id="edit-categoria-outro-${id}" value="${outroValue}" style="display:${selectedCat==='Outro'?'block':'none'}; margin-top:4px;">`;
+            } else if (tipo === 'receita') {
+                const selectedTipo = categoriasReceita.includes(dados.tipo) ? dados.tipo : 'Outro';
+                const outroTipoValue = selectedTipo === 'Outro' ? dados.tipo || '' : '';
+                formHtml = `<input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}"><input type="number" id="edit-km-${id}" value="${dados.km}"><input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}"><label>🏢 Estabelecimento</label><select id="edit-tipo-${id}" onchange="toggleEditOutroTipo('${id}')">${categoriasReceita.map(t => `<option value="${t}" ${t===selectedTipo?'selected':''}>${t}</option>`).join('')}<option value="Outro" ${selectedTipo==='Outro'?'selected':''}>✏️ Outro</option></select><input type="text" id="edit-tipo-outro-${id}" value="${outroTipoValue}" style="display:${selectedTipo==='Outro'?'block':'none'}; margin-top:4px;">`;
+            }
+            formHtml += `<br><button class="btn-primary btn-small" onclick="salvarEdicao('${tipo}', '${id}')">💾 Salvar</button>`;
+            editDiv.innerHTML = formHtml;
+            editDiv.style.display = 'block';
+        };
+
+        window.toggleEditOutro = function(id) {
+            const sel = document.getElementById(`edit-categoria-${id}`);
+            const outro = document.getElementById(`edit-categoria-outro-${id}`);
+            if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
+        };
+        window.toggleEditOutroTipo = function(id) {
+            const sel = document.getElementById(`edit-tipo-${id}`);
+            const outro = document.getElementById(`edit-tipo-outro-${id}`);
+            if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
+        };
+        window.salvarEdicao = async function(tipo, id) {
+            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
+            const at = {};
+            if (tipo === 'abastecimento') {
+                at['data'] = document.getElementById(`edit-data-${id}`).value;
+                at['km'] = Number(document.getElementById(`edit-km-${id}`).value);
+                at['preco_litro'] = Number(document.getElementById(`edit-preco-${id}`).value);
+                at['valor_total'] = Number(document.getElementById(`edit-valor-${id}`).value);
+                at['litros'] = Number(document.getElementById(`edit-litros-${id}`).value);
+                at['posto'] = document.getElementById(`edit-posto-${id}`).value;
+                at['tanque_cheio'] = document.getElementById(`edit-tanque-${id}`).checked;
+            } else if (tipo === 'despesa') {
+                at['data'] = document.getElementById(`edit-data-${id}`).value;
+                at['km'] = Number(document.getElementById(`edit-km-${id}`).value);
+                at['valor'] = Number(document.getElementById(`edit-valor-${id}`).value);
+                at['descricao'] = document.getElementById(`edit-descricao-${id}`).value;
+                const catSel = document.getElementById(`edit-categoria-${id}`);
+                const catOut = document.getElementById(`edit-categoria-outro-${id}`);
+                at['categoria'] = catSel.value === 'Outro' ? catOut.value : catSel.value;
+            } else if (tipo === 'receita') {
+                at['data'] = document.getElementById(`edit-data-${id}`).value;
+                at['km'] = Number(document.getElementById(`edit-km-${id}`).value);
+                at['valor'] = Number(document.getElementById(`edit-valor-${id}`).value);
+                const tipoSel = document.getElementById(`edit-tipo-${id}`);
+                const tipoOut = document.getElementById(`edit-tipo-outro-${id}`);
+                at['tipo'] = tipoSel.value === 'Outro' ? tipoOut.value : tipoSel.value;
+            }
+            await update(ref(db, `${colecao}/${id}`), at);
+            alert('✅ Alterações salvas!');
+            renderHistorico();
+            if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+        };
+
+        window.excluirRegistro = async function(tipo, id) {
+            if (!confirm('Excluir?')) return;
+            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
+            const snap = await get(ref(db, `${colecao}/${id}`));
+            if (snap.exists() && snap.val().uid !== currentUser.uid) { alert('Acesso negado.'); return; }
+            await remove(ref(db, `${colecao}/${id}`));
+            alert('🗑️ Excluído.');
+            renderHistorico();
+            if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+        };
+
+        // ========== DASHBOARD ==========
+        async function carregarDashboard() {
+            if (!currentUser) return;
+            const [abastSnap, despSnap, recSnap] = await Promise.all([
+                get(ref(db, 'abastecimentos')),
+                get(ref(db, 'despesas')),
+                get(ref(db, 'receitas'))
+            ]);
+            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
+            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
+            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) receitas.push(v); });
+
+            const totalReceitas = receitas.reduce((s,r) => s + Number(r.valor), 0);
+            const totalDespesas = despesas.reduce((s,d) => s + Number(d.valor), 0) + abastecimentos.reduce((s,a) => s + Number(a.valor_total), 0);
+            document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
+
+            const todosGastos = [...abastecimentos, ...despesas];
+            const kms = todosGastos.map(r => r.km).filter(km => !isNaN(km));
+            const custoKm = kms.length >= 2 ? (totalDespesas / (Math.max(...kms) - Math.min(...kms))) : 0;
+            document.getElementById('custoKm').textContent = `R$ ${custoKm.toFixed(2)}`;
+
+            let consumoMedio = 0;
+            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
+            if (tanquesCheios.length >= 2) {
+                tanquesCheios.sort((a,b) => new Date(a.data) - new Date(b.data));
+                const ultimo = tanquesCheios[tanquesCheios.length-1];
+                const penultimo = tanquesCheios[tanquesCheios.length-2];
+                const kmPercorridos = ultimo.km - penultimo.km;
+                if (kmPercorridos > 0) {
+                    const entre = abastecimentos.filter(a => new Date(a.data) > new Date(penultimo.data) && new Date(a.data) <= new Date(ultimo.data));
+                    const totalLitros = entre.reduce((s,a) => s + a.litros, 0);
+                    consumoMedio = totalLitros > 0 ? kmPercorridos / totalLitros : 0;
+                }
+            }
+            document.getElementById('consumoMedio').textContent = `${consumoMedio.toFixed(2)} km/l`;
+
+            let autonomia = 0;
+            if (consumoMedio > 0 && abastecimentos.length > 0) {
+                const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+                if (ultimoAbast.tanque_cheio) autonomia = Math.round(consumoMedio * ultimoAbast.litros);
+            }
+            document.getElementById('autonomia').textContent = `${autonomia} km`;
+
+            function getPeriodos(dataStr) {
+                const agora = new Date();
+                const data = new Date(dataStr);
+                const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+                const dataSemHora = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+                const dia = dataSemHora.getTime() === hoje.getTime();
+                const diaSemana = agora.getDay();
+                const inicioSemana = new Date(hoje);
+                inicioSemana.setDate(hoje.getDate() - ((diaSemana + 6) % 7));
+                const fimSemana = new Date(inicioSemana);
+                fimSemana.setDate(inicioSemana.getDate() + 6);
+                const semana = dataSemHora >= inicioSemana && dataSemHora <= fimSemana;
+                const mes = data.getMonth() === agora.getMonth() && data.getFullYear() === agora.getFullYear();
+                const ano = data.getFullYear() === agora.getFullYear();
+                return { dia, semana, mes, ano };
+            }
+            function calcularTotais(regs) {
+                const t = { dia:0, semana:0, mes:0, ano:0 };
+                regs.forEach(r => {
+                    if (!r.data) return;
+                    const p = getPeriodos(r.data);
+                    const v = r.valor || r.valor_total || 0;
+                    if (p.dia) t.dia += Number(v);
+                    if (p.semana) t.semana += Number(v);
+                    if (p.mes) t.mes += Number(v);
+                    if (p.ano) t.ano += Number(v);
+                });
+                return t;
+            }
+            const ganhos = calcularTotais(receitas);
+            const gastos = calcularTotais([...abastecimentos, ...despesas]);
+
+            document.getElementById('ganhoDia').textContent = `R$ ${ganhos.dia.toFixed(2)}`;
+            document.getElementById('ganhoSemana').textContent = `R$ ${ganhos.semana.toFixed(2)}`;
+            document.getElementById('ganhoMes').textContent = `R$ ${ganhos.mes.toFixed(2)}`;
+            document.getElementById('ganhoAno').textContent = `R$ ${ganhos.ano.toFixed(2)}`;
+            document.getElementById('gastoDia').textContent = `R$ ${gastos.dia.toFixed(2)}`;
+            document.getElementById('gastoSemana').textContent = `R$ ${gastos.semana.toFixed(2)}`;
+            document.getElementById('gastoMes').textContent = `R$ ${gastos.mes.toFixed(2)}`;
+            document.getElementById('gastoAno').textContent = `R$ ${gastos.ano.toFixed(2)}`;
+            document.getElementById('saldoDia').textContent = `R$ ${(ganhos.dia - gastos.dia).toFixed(2)}`;
+            document.getElementById('saldoSemana').textContent = `R$ ${(ganhos.semana - gastos.semana).toFixed(2)}`;
+            document.getElementById('saldoMes').textContent = `R$ ${(ganhos.mes - gastos.mes).toFixed(2)}`;
+            document.getElementById('saldoAno').textContent = `R$ ${(ganhos.ano - gastos.ano).toFixed(2)}`;
+        }
+
+        // ========== LEMBRETES ==========
+        async function gerarLembretes() {
+            if (!currentUser) return;
+            const div = document.getElementById('lembretesConteudo');
+            const snap = await get(ref(db, 'abastecimentos'));
+            const abastecimentos = [];
+            if (snap.exists()) snap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
+            if (abastecimentos.length === 0) { div.innerHTML = '<p class="empty-state">Nenhum abastecimento.</p>'; return; }
+            const tanques = abastecimentos.filter(a => a.tanque_cheio);
+            if (tanques.length < 2) { div.innerHTML = '<p class="empty-state">Registre dois tanques cheios.</p>'; return; }
+            tanques.sort((a,b) => new Date(a.data) - new Date(b.data));
+            const ultimo = tanques[tanques.length-1];
+            const penultimo = tanques[tanques.length-2];
+            const kmPerc = ultimo.km - penultimo.km;
+            if (kmPerc <= 0) { div.innerHTML = '<p class="empty-state">Km inválido.</p>'; return; }
+            const entre = abastecimentos.filter(a => new Date(a.data) > new Date(penultimo.data) && new Date(a.data) <= new Date(ultimo.data));
+            const totalLitros = entre.reduce((s,a) => s + a.litros, 0);
+            const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
+            if (consumo <= 0) { div.innerHTML = '<p class="empty-state">Dados insuficientes.</p>'; return; }
+            const autonomia = Math.round(consumo * ultimo.litros);
+            const kmLembrete = ultimo.km + autonomia;
+            div.innerHTML = `<p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p><p>⛽ Último abast: <strong>${ultimo.km} km</strong> (${ultimo.litros}L)</p><p>🔔 Próximo abastecimento: <strong>${kmLembrete} km</strong></p>`;
+        }
     </script>
 </body>
 </html>
