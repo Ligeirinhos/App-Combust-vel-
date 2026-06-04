@@ -165,26 +165,31 @@
         let categoriasDespesa = [];
         let categoriasReceita = [];
 
-        // ========== CATEGORIAS (ORDENADAS) ==========
+        // ========== CATEGORIAS ==========
         async function carregarCategorias() {
-            const snapDesp = await get(ref(db, 'categoriasDespesas'));
-            if (snapDesp.exists()) {
-                categoriasDespesa = Object.values(snapDesp.val());
-            } else {
-                categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro'];
-                set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
-            }
-            categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            try {
+                const snapDesp = await get(ref(db, 'categoriasDespesas'));
+                if (snapDesp.exists()) {
+                    categoriasDespesa = Object.values(snapDesp.val());
+                } else {
+                    categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro'];
+                    set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+                }
+                categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-            const snapRec = await get(ref(db, 'categoriasReceitas'));
-            if (snapRec.exists()) {
-                categoriasReceita = Object.values(snapRec.val());
-            } else {
-                categoriasReceita = ['Cacau Show','iFood','Insalata','Ligeirinho\'s','Particular'];
-                set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+                const snapRec = await get(ref(db, 'categoriasReceitas'));
+                if (snapRec.exists()) {
+                    categoriasReceita = Object.values(snapRec.val());
+                } else {
+                    categoriasReceita = ['Cacau Show','iFood','Insalata','Ligeirinho\'s','Particular'];
+                    set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+                }
+                categoriasReceita.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+                renderizarListaCategorias();
+            } catch (error) {
+                alert('Erro ao carregar categorias: ' + error.message);
+                console.error(error);
             }
-            categoriasReceita.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-            renderizarListaCategorias();
         }
 
         function salvarCategoriasDespesa() {
@@ -273,7 +278,7 @@
             });
         });
 
-        // ========== FORMULÁRIO DINÂMICO ==========
+        // ========== FORMULÁRIO ==========
         window.atualizarFormulario = function() {
             const tipo = document.getElementById('tipoRegistro').value;
             const container = document.getElementById('formDinamico');
@@ -310,10 +315,4 @@
                     <div class="form-group">
                         <label>🏢 Estabelecimento</label>
                         <select id="tipoReceitaSelect" onchange="toggleTipoOutro()">${options}</select>
-                        <input type="text" id="tipoReceitaOutro" placeholder="Digite o nome" style="display:none; margin-top:4px;">
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-            const agora = new Date();
-     
+                        <input type="text" id="tipoRecei
