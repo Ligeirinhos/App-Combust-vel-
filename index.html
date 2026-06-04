@@ -174,7 +174,6 @@
                 categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro'];
                 set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
             }
-            // Ordena alfabeticamente
             categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
             const snapRec = await get(ref(db, 'categoriasReceitas'));
@@ -189,7 +188,6 @@
         }
 
         function salvarCategoriasDespesa() {
-            // Ordena antes de salvar
             categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
             set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
         }
@@ -240,10 +238,7 @@
                 salvarCategoriasDespesa();
                 renderizarListaCategorias();
                 input.value = '';
-                // Se a aba "Novo" estiver ativa, atualiza o formulário para refletir as novas categorias
-                if (document.getElementById('tab-novo').classList.contains('active')) {
-                    atualizarFormulario();
-                }
+                if (document.getElementById('tab-novo').classList.contains('active')) atualizarFormulario();
             }
         });
 
@@ -255,17 +250,14 @@
                 salvarCategoriasReceita();
                 renderizarListaCategorias();
                 input.value = '';
-                // Se a aba "Novo" estiver ativa, atualiza o formulário para incluir o novo estabelecimento
-                if (document.getElementById('tab-novo').classList.contains('active')) {
-                    atualizarFormulario();
-                }
+                if (document.getElementById('tab-novo').classList.contains('active')) atualizarFormulario();
             }
         });
 
         document.getElementById('novaCatDespesa').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatDespesa').click(); });
         document.getElementById('novaCatReceita').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatReceita').click(); });
 
-        // ========== NAVEGAÇÃO (ATUALIZA FORMULÁRIO AO ABRIR "NOVO") ==========
+        // ========== NAVEGAÇÃO ==========
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 const tabName = tab.dataset.tab;
@@ -277,7 +269,7 @@
                 else if (tabName === 'historico') renderHistorico();
                 else if (tabName === 'lembretes') gerarLembretes();
                 else if (tabName === 'categorias') renderizarListaCategorias();
-                else if (tabName === 'novo') atualizarFormulario(); // ATUALIZA AQUI
+                else if (tabName === 'novo') atualizarFormulario();
             });
         });
 
@@ -316,4 +308,12 @@
                     <div class="form-group"><label>Km</label><input type="number" id="km_rec" required></div>
                     <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorRec" required></div>
                     <div class="form-group">
-            
+                        <label>🏢 Estabelecimento</label>
+                        <select id="tipoReceitaSelect" onchange="toggleTipoOutro()">${options}</select>
+                        <input type="text" id="tipoReceitaOutro" placeholder="Digite o nome" style="display:none; margin-top:4px;">
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+            const agora = new Date();
+     
