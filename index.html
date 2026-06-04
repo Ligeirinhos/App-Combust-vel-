@@ -22,6 +22,13 @@
         .dash-item { background:var(--card); padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border); }
         .dash-item .number { font-size:1.6em; font-weight:bold; color:var(--gold); }
         .dash-item .label { font-size:0.8em; color:var(--secondary); margin-top:4px; }
+        .resumo-section { margin-bottom:15px; }
+        .resumo-section h3 { color:var(--secondary); margin-bottom:8px; }
+        .resumo-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; }
+        .resumo-card { background:var(--bg); border-radius:10px; padding:10px; text-align:center; border:1px solid var(--border); }
+        .resumo-card .valor { font-size:1.2em; font-weight:bold; }
+        .resumo-card .periodo { font-size:0.7em; color:var(--secondary); }
+        .ganho .valor { color:#2ecc71; } .gasto .valor { color:var(--primary); } .saldo .valor { color:var(--gold); }
         .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
         .form-group { margin-bottom:6px; } .form-group.full { grid-column:1/-1; }
         .form-group label { display:block; font-size:0.75em; color:var(--secondary); margin-bottom:2px; }
@@ -41,7 +48,6 @@
         .result-info strong { color:var(--secondary); display:block; }
         .empty-state { text-align:center; opacity:0.5; padding:15px; }
         .badge { display:inline-block; padding:2px 6px; border-radius:6px; font-size:0.7em; margin-left:4px; }
-        .chart-container { width:100%; height:250px; margin-top:12px; }
         .filter-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; align-items:center; }
         .filter-row input, .filter-row select { flex:1; min-width:100px; }
         .total-filtro { text-align:center; font-size:1em; color:var(--gold); margin:8px 0; }
@@ -66,7 +72,7 @@
             <button class="tab" data-tab="categorias">⚙️ Categorias</button>
         </div>
 
-        <!-- Histórico -->
+        <!-- Histórico (inalterado) -->
         <div class="tab-content active" id="tab-historico">
             <div class="card">
                 <h2>📋 Registros</h2>
@@ -86,6 +92,7 @@
             </div>
         </div>
 
+        <!-- Dashboard remodelado -->
         <div class="tab-content" id="tab-dashboard">
             <div class="dashboard">
                 <div class="dash-item"><div class="number" id="saldoAtual">R$ 0,00</div><div class="label">Saldo (Receita - Gastos)</div></div>
@@ -93,10 +100,42 @@
                 <div class="dash-item"><div class="number" id="consumoMedio">0,00 km/l</div><div class="label">Consumo médio</div></div>
                 <div class="dash-item"><div class="number" id="autonomia">0 km</div><div class="label">Autonomia estimada</div></div>
             </div>
-            <div class="card"><h3 style="color:var(--secondary);">Gastos mensais</h3><div class="chart-container"><canvas id="graficoGastos"></canvas></div></div>
-            <div class="card"><h3 style="color:var(--secondary);">Receitas mensais</h3><div class="chart-container"><canvas id="graficoReceitas"></canvas></div></div>
+
+            <!-- Seção Ganhos -->
+            <div class="resumo-section">
+                <h3>🟢 Ganhos</h3>
+                <div class="resumo-grid">
+                    <div class="resumo-card ganho"><div class="valor" id="ganhoDia">R$0</div><div class="periodo">Hoje</div></div>
+                    <div class="resumo-card ganho"><div class="valor" id="ganhoSemana">R$0</div><div class="periodo">Semana</div></div>
+                    <div class="resumo-card ganho"><div class="valor" id="ganhoMes">R$0</div><div class="periodo">Mês</div></div>
+                    <div class="resumo-card ganho"><div class="valor" id="ganhoAno">R$0</div><div class="periodo">Ano</div></div>
+                </div>
+            </div>
+
+            <!-- Seção Gastos -->
+            <div class="resumo-section">
+                <h3>🔴 Gastos</h3>
+                <div class="resumo-grid">
+                    <div class="resumo-card gasto"><div class="valor" id="gastoDia">R$0</div><div class="periodo">Hoje</div></div>
+                    <div class="resumo-card gasto"><div class="valor" id="gastoSemana">R$0</div><div class="periodo">Semana</div></div>
+                    <div class="resumo-card gasto"><div class="valor" id="gastoMes">R$0</div><div class="periodo">Mês</div></div>
+                    <div class="resumo-card gasto"><div class="valor" id="gastoAno">R$0</div><div class="periodo">Ano</div></div>
+                </div>
+            </div>
+
+            <!-- Seção Saldo -->
+            <div class="resumo-section">
+                <h3>🟡 Saldo</h3>
+                <div class="resumo-grid">
+                    <div class="resumo-card saldo"><div class="valor" id="saldoDia">R$0</div><div class="periodo">Hoje</div></div>
+                    <div class="resumo-card saldo"><div class="valor" id="saldoSemana">R$0</div><div class="periodo">Semana</div></div>
+                    <div class="resumo-card saldo"><div class="valor" id="saldoMes">R$0</div><div class="periodo">Mês</div></div>
+                    <div class="resumo-card saldo"><div class="valor" id="saldoAno">R$0</div><div class="periodo">Ano</div></div>
+                </div>
+            </div>
         </div>
 
+        <!-- Aba Novo (inalterada) -->
         <div class="tab-content" id="tab-novo">
             <div class="card">
                 <h2>➕ Novo Registro</h2>
@@ -113,6 +152,7 @@
             </div>
         </div>
 
+        <!-- Lembretes (inalterado) -->
         <div class="tab-content" id="tab-lembretes">
             <div class="card">
                 <h2>🔔 Próximo abastecimento</h2>
@@ -120,6 +160,7 @@
             </div>
         </div>
 
+        <!-- Categorias (inalterado) -->
         <div class="tab-content" id="tab-categorias">
             <div class="card">
                 <h3 style="color:var(--secondary);">🟢 Tipos de Receita (Estabelecimentos)</h3>
@@ -140,8 +181,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -158,8 +197,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        let chartGastos = null;
-        let chartReceitas = null;
         const USER_ID = 'demo-user';
         const VEICULO = 'Moto';
         let categoriasDespesa = [];
@@ -202,16 +239,10 @@
             const listaRec = document.getElementById('listaCategoriasReceita');
             if (!listaDesp || !listaRec) return;
             listaDesp.innerHTML = categoriasDespesa.map(cat => `
-                <div class="categoria-item">
-                    <span>${cat}</span>
-                    <button class="btn-delete-cat" data-categoria="${cat}" data-tipo="despesa">❌</button>
-                </div>
+                <div class="categoria-item"><span>${cat}</span><button class="btn-delete-cat" data-categoria="${cat}" data-tipo="despesa">❌</button></div>
             `).join('');
             listaRec.innerHTML = categoriasReceita.map(cat => `
-                <div class="categoria-item">
-                    <span>${cat}</span>
-                    <button class="btn-delete-cat" data-categoria="${cat}" data-tipo="receita">❌</button>
-                </div>
+                <div class="categoria-item"><span>${cat}</span><button class="btn-delete-cat" data-categoria="${cat}" data-tipo="receita">❌</button></div>
             `).join('');
 
             document.querySelectorAll('.btn-delete-cat').forEach(btn => {
@@ -354,8 +385,7 @@
                     const valorTotal = document.getElementById('valorAbast');
                     const litros = document.getElementById('litros');
                     if (!precoLitro || !valorTotal || !litros) throw new Error('Campos do abastecimento não encontrados.');
-                    dados = {
-                        ...dados,
+                    dados = { ...dados,
                         data: document.getElementById('data_abast').value,
                         km: Number(document.getElementById('km_abast').value),
                         litros: Number(litros.value),
@@ -368,8 +398,7 @@
                     const catSelect = document.getElementById('categoriaSelect');
                     const catOutro = document.getElementById('categoriaOutro');
                     const categoria = catSelect.value === 'Outro' ? catOutro.value : catSelect.value;
-                    dados = {
-                        ...dados,
+                    dados = { ...dados,
                         data: document.getElementById('data_desp').value,
                         km: Number(document.getElementById('km_desp').value),
                         valor: Number(document.getElementById('valorDesp').value),
@@ -380,8 +409,7 @@
                     const tipoSelect = document.getElementById('tipoReceitaSelect');
                     const tipoOutro = document.getElementById('tipoReceitaOutro');
                     const estabelecimento = tipoSelect.value === 'Outro' ? tipoOutro.value : tipoSelect.value;
-                    dados = {
-                        ...dados,
+                    dados = { ...dados,
                         data: document.getElementById('data_rec').value,
                         km: Number(document.getElementById('km_rec').value),
                         valor: Number(document.getElementById('valorRec').value),
@@ -579,111 +607,146 @@
             if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
         };
 
-        // ========== DASHBOARD ==========
-        function calcularConsumoMedio(abastecimentos) {
-            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
-            if (tanquesCheios.length < 2) return 0;
-            tanquesCheios.sort((a, b) => a.data < b.data ? -1 : 1);
-            const ultimo = tanquesCheios[tanquesCheios.length - 1];
-            const penultimo = tanquesCheios[tanquesCheios.length - 2];
-            const kmPercorridos = ultimo.km - penultimo.km;
-            if (kmPercorridos <= 0) return 0;
-            const entre = abastecimentos.filter(a => a.data > penultimo.data && a.data <= ultimo.data);
-            const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
-            return totalLitros > 0 ? kmPercorridos / totalLitros : 0;
+        // ========== CÁLCULOS DE PERÍODO ==========
+        function getPeriodos(dataStr) {
+            const agora = new Date();
+            const data = new Date(dataStr);
+            const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+            const dataSemHora = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+            
+            // Dia
+            const dia = dataSemHora.getTime() === hoje.getTime();
+            
+            // Semana (segunda a domingo)
+            const diaSemana = agora.getDay(); // 0 = domingo, 1 = segunda, ...
+            const inicioSemana = new Date(hoje);
+            inicioSemana.setDate(hoje.getDate() - ((diaSemana + 6) % 7)); // segunda
+            const fimSemana = new Date(inicioSemana);
+            fimSemana.setDate(inicioSemana.getDate() + 6); // domingo
+            const semana = dataSemHora >= inicioSemana && dataSemHora <= fimSemana;
+            
+            // Mês
+            const mes = data.getMonth() === agora.getMonth() && data.getFullYear() === agora.getFullYear();
+            
+            // Ano
+            const ano = data.getFullYear() === agora.getFullYear();
+            
+            return { dia, semana, mes, ano };
         }
 
-        function custoPorKm(abastecimentos, despesas) {
-            const todos = [...abastecimentos, ...despesas];
-            if (todos.length < 2) return 0;
-            const kms = todos.map(r => r.km);
-            const kmTotal = Math.max(...kms) - Math.min(...kms);
-            if (kmTotal === 0) return 0;
-            const gastoTotal = abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0) + despesas.reduce((s, d) => s + Number(d.valor), 0);
-            return gastoTotal / kmTotal;
+        function calcularTotais(registros) {
+            const totais = { dia: 0, semana: 0, mes: 0, ano: 0 };
+            registros.forEach(r => {
+                if (!r.data) return;
+                const periodos = getPeriodos(r.data);
+                const valor = r.valor || r.valor_total || 0;
+                if (periodos.dia) totais.dia += Number(valor);
+                if (periodos.semana) totais.semana += Number(valor);
+                if (periodos.mes) totais.mes += Number(valor);
+                if (periodos.ano) totais.ano += Number(valor);
+            });
+            return totais;
         }
 
+        // ========== DASHBOARD ATUALIZADO ==========
         async function carregarDashboard() {
             const abastSnap = await get(ref(db, 'abastecimentos'));
             const despSnap = await get(ref(db, 'despesas'));
             const recSnap = await get(ref(db, 'receitas'));
-            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) abastecimentos.push({ id: d.key, ...val }); });
-            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) despesas.push({ id: d.key, ...val }); });
-            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) receitas.push({ id: d.key, ...val }); });
+            
+            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) abastecimentos.push(val); });
+            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) despesas.push(val); });
+            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) receitas.push(val); });
 
+            // Indicadores gerais (saldo total, custo/km, consumo médio, autonomia)
             const totalReceitas = receitas.reduce((s, r) => s + Number(r.valor), 0);
             const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0) + abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0);
             document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
-            document.getElementById('custoKm').textContent = `R$ ${custoPorKm(abastecimentos, despesas).toFixed(2)}`;
-
-            const consumo = calcularConsumoMedio(abastecimentos);
-            document.getElementById('consumoMedio').textContent = `${consumo.toFixed(2)} km/l`;
-
+            
+            // Custo por km
+            const todosGastos = [...abastecimentos, ...despesas];
+            const kms = todosGastos.map(r => r.km).filter(km => !isNaN(km));
+            const custoKm = kms.length >= 2 ? (totalDespesas / (Math.max(...kms) - Math.min(...kms))) : 0;
+            document.getElementById('custoKm').textContent = `R$ ${custoKm.toFixed(2)}`;
+            
+            // Consumo médio
+            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
+            let consumoMedio = 0;
+            if (tanquesCheios.length >= 2) {
+                tanquesCheios.sort((a, b) => new Date(a.data) - new Date(b.data));
+                const ultimo = tanquesCheios[tanquesCheios.length - 1];
+                const penultimo = tanquesCheios[tanquesCheios.length - 2];
+                const kmPercorridos = ultimo.km - penultimo.km;
+                if (kmPercorridos > 0) {
+                    const entre = abastecimentos.filter(a => {
+                        const d = new Date(a.data);
+                        return d > new Date(penultimo.data) && d <= new Date(ultimo.data);
+                    });
+                    const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
+                    consumoMedio = totalLitros > 0 ? kmPercorridos / totalLitros : 0;
+                }
+            }
+            document.getElementById('consumoMedio').textContent = `${consumoMedio.toFixed(2)} km/l`;
+            
+            // Autonomia
             let autonomia = 0;
-            if (consumo > 0 && abastecimentos.length > 0) {
-                const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
-                if (ultimo.tanque_cheio) autonomia = Math.round(consumo * ultimo.litros);
+            if (consumoMedio > 0 && abastecimentos.length > 0) {
+                const ultimoAbast = abastecimentos.reduce((a, b) => new Date(a.data) > new Date(b.data) ? a : b);
+                if (ultimoAbast.tanque_cheio) autonomia = Math.round(consumoMedio * ultimoAbast.litros);
             }
             document.getElementById('autonomia').textContent = `${autonomia} km`;
 
-            const gastosPorMes = {};
-            [...abastecimentos, ...despesas].forEach(r => {
-                const [ano, mes] = r.data ? r.data.slice(0,10).split('-') : ['',''];
-                const mesAno = `${mes}/${ano}`;
-                const valor = r.valor_total || r.valor || 0;
-                gastosPorMes[mesAno] = (gastosPorMes[mesAno] || 0) + Number(valor);
-            });
-            const labelsGastos = Object.keys(gastosPorMes).sort((a, b) => {
-                const [mA, aA] = a.split('/'); const [mB, aB] = b.split('/');
-                return new Date(aA, mA-1) - new Date(aB, mB-1);
-            });
-            const dadosGastos = labelsGastos.map(l => gastosPorMes[l]);
-            const ctxGastos = document.getElementById('graficoGastos').getContext('2d');
-            if (chartGastos) chartGastos.destroy();
-            if (dadosGastos.length > 0) {
-                chartGastos = new Chart(ctxGastos, {
-                    type: 'bar', data: { labels: labelsGastos, datasets: [{ label: 'Gastos (R$)', data: dadosGastos, backgroundColor: '#e63946' }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#ffffff' } }, x: { ticks: { color: '#ffffff' } } }, plugins: { legend: { labels: { color: '#ffffff' } } } }
-                });
-            }
-
-            const receitasPorMes = {};
-            receitas.forEach(r => {
-                const [ano, mes] = r.data ? r.data.slice(0,10).split('-') : ['',''];
-                const mesAno = `${mes}/${ano}`;
-                const valor = r.valor || 0;
-                receitasPorMes[mesAno] = (receitasPorMes[mesAno] || 0) + Number(valor);
-            });
-            const labelsReceitas = Object.keys(receitasPorMes).sort((a, b) => {
-                const [mA, aA] = a.split('/'); const [mB, aB] = b.split('/');
-                return new Date(aA, mA-1) - new Date(aB, mB-1);
-            });
-            const dadosReceitas = labelsReceitas.map(l => receitasPorMes[l]);
-            const ctxReceitas = document.getElementById('graficoReceitas').getContext('2d');
-            if (chartReceitas) chartReceitas.destroy();
-            if (dadosReceitas.length > 0) {
-                chartReceitas = new Chart(ctxReceitas, {
-                    type: 'bar', data: { labels: labelsReceitas, datasets: [{ label: 'Receitas (R$)', data: dadosReceitas, backgroundColor: '#ffc107' }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#ffffff' } }, x: { ticks: { color: '#ffffff' } } }, plugins: { legend: { labels: { color: '#ffffff' } } } }
-                });
-            }
+            // Totais por período
+            const ganhos = calcularTotais(receitas);
+            const gastos = calcularTotais([...abastecimentos, ...despesas]);
+            
+            document.getElementById('ganhoDia').textContent = `R$ ${ganhos.dia.toFixed(2)}`;
+            document.getElementById('ganhoSemana').textContent = `R$ ${ganhos.semana.toFixed(2)}`;
+            document.getElementById('ganhoMes').textContent = `R$ ${ganhos.mes.toFixed(2)}`;
+            document.getElementById('ganhoAno').textContent = `R$ ${ganhos.ano.toFixed(2)}`;
+            
+            document.getElementById('gastoDia').textContent = `R$ ${gastos.dia.toFixed(2)}`;
+            document.getElementById('gastoSemana').textContent = `R$ ${gastos.semana.toFixed(2)}`;
+            document.getElementById('gastoMes').textContent = `R$ ${gastos.mes.toFixed(2)}`;
+            document.getElementById('gastoAno').textContent = `R$ ${gastos.ano.toFixed(2)}`;
+            
+            document.getElementById('saldoDia').textContent = `R$ ${(ganhos.dia - gastos.dia).toFixed(2)}`;
+            document.getElementById('saldoSemana').textContent = `R$ ${(ganhos.semana - gastos.semana).toFixed(2)}`;
+            document.getElementById('saldoMes').textContent = `R$ ${(ganhos.mes - gastos.mes).toFixed(2)}`;
+            document.getElementById('saldoAno').textContent = `R$ ${(ganhos.ano - gastos.ano).toFixed(2)}`;
         }
 
+        // ========== LEMBRETES ==========
         async function gerarLembretes() {
             const div = document.getElementById('lembretesConteudo');
             const abastSnap = await get(ref(db, 'abastecimentos'));
             const abastecimentos = [];
             if (abastSnap.exists()) abastSnap.forEach(d => {
-                const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) abastecimentos.push({ id: d.key, ...val });
+                const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) abastecimentos.push(val);
             });
             if (abastecimentos.length === 0) {
                 div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>'; return;
             }
-            const consumo = calcularConsumoMedio(abastecimentos);
-            if (consumo <= 0) {
+            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
+            if (tanquesCheios.length < 2) {
                 div.innerHTML = '<p class="empty-state">Registre dois abastecimentos com tanque cheio para calcular a previsão.</p>'; return;
             }
-            const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
+            tanquesCheios.sort((a, b) => new Date(a.data) - new Date(b.data));
+            const ultimo = tanquesCheios[tanquesCheios.length - 1];
+            const penultimo = tanquesCheios[tanquesCheios.length - 2];
+            const kmPercorridos = ultimo.km - penultimo.km;
+            if (kmPercorridos <= 0) {
+                div.innerHTML = '<p class="empty-state">Quilometragem inválida para cálculo.</p>'; return;
+            }
+            const entre = abastecimentos.filter(a => {
+                const d = new Date(a.data);
+                return d > new Date(penultimo.data) && d <= new Date(ultimo.data);
+            });
+            const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
+            const consumo = totalLitros > 0 ? kmPercorridos / totalLitros : 0;
+            if (consumo <= 0) {
+                div.innerHTML = '<p class="empty-state">Dados insuficientes para calcular.</p>'; return;
+            }
             const autonomia = Math.round(consumo * ultimo.litros);
             const kmLembrete = ultimo.km + autonomia;
             div.innerHTML = `
@@ -693,11 +756,11 @@
             `;
         }
 
-        // Inicialização segura
+        // ========== INICIALIZAÇÃO ==========
         (async function iniciar() {
             await carregarCategorias();
             renderHistorico();
         })();
     </script>
 </body>
-</html>
+</html>/
