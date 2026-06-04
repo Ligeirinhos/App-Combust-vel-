@@ -77,7 +77,7 @@
                         <option value="despesa">Despesas</option>
                         <option value="receita">Receitas</option>
                     </select>
-                    <input type="text" id="filtroEstabelecimento" placeholder="🔍 Buscar por estabelecimento (Tipo)" oninput="renderHistorico()" style="flex:2;">
+                    <input type="text" id="filtroEstabelecimento" placeholder="🔍 Buscar por estabelecimento" oninput="renderHistorico()" style="flex:2;">
                     <input type="date" id="filtroDataInicio" onchange="renderHistorico()" style="flex:1;" title="Data início">
                     <input type="date" id="filtroDataFim" onchange="renderHistorico()" style="flex:1;" title="Data fim">
                 </div>
@@ -165,28 +165,37 @@
         let categoriasDespesa = [];
         let categoriasReceita = [];
 
-        // ========== CATEGORIAS ==========
+        // ========== CATEGORIAS (ORDENADAS) ==========
         async function carregarCategorias() {
             const snapDesp = await get(ref(db, 'categoriasDespesas'));
-            if (snapDesp.exists()) categoriasDespesa = Object.values(snapDesp.val());
-            else {
+            if (snapDesp.exists()) {
+                categoriasDespesa = Object.values(snapDesp.val());
+            } else {
                 categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro'];
                 set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
             }
+            // Ordena alfabeticamente
+            categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
             const snapRec = await get(ref(db, 'categoriasReceitas'));
-            if (snapRec.exists()) categoriasReceita = Object.values(snapRec.val());
-            else {
+            if (snapRec.exists()) {
+                categoriasReceita = Object.values(snapRec.val());
+            } else {
                 categoriasReceita = ['Cacau Show','iFood','Insalata','Ligeirinho\'s','Particular'];
                 set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
             }
+            categoriasReceita.sort((a, b) => a.localeCompare(b, 'pt-BR'));
             renderizarListaCategorias();
         }
 
         function salvarCategoriasDespesa() {
+            // Ordena antes de salvar
+            categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
             set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
         }
 
         function salvarCategoriasReceita() {
+            categoriasReceita.sort((a, b) => a.localeCompare(b, 'pt-BR'));
             set(ref(db, 'categoriasReceitas'), categoriasReceita.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
         }
 
@@ -231,6 +240,10 @@
                 salvarCategoriasDespesa();
                 renderizarListaCategorias();
                 input.value = '';
+                // Se a aba "Novo" estiver ativa, atualiza o formulário para refletir as novas categorias
+                if (document.getElementById('tab-novo').classList.contains('active')) {
+                    atualizarFormulario();
+                }
             }
         });
 
@@ -242,13 +255,17 @@
                 salvarCategoriasReceita();
                 renderizarListaCategorias();
                 input.value = '';
+                // Se a aba "Novo" estiver ativa, atualiza o formulário para incluir o novo estabelecimento
+                if (document.getElementById('tab-novo').classList.contains('active')) {
+                    atualizarFormulario();
+                }
             }
         });
 
         document.getElementById('novaCatDespesa').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatDespesa').click(); });
         document.getElementById('novaCatReceita').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatReceita').click(); });
 
-        // ========== NAVEGAÇÃO ==========
+        // ========== NAVEGAÇÃO (ATUALIZA FORMULÁRIO AO ABRIR "NOVO") ==========
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 const tabName = tab.dataset.tab;
@@ -260,10 +277,11 @@
                 else if (tabName === 'historico') renderHistorico();
                 else if (tabName === 'lembretes') gerarLembretes();
                 else if (tabName === 'categorias') renderizarListaCategorias();
+                else if (tabName === 'novo') atualizarFormulario(); // ATUALIZA AQUI
             });
         });
 
-        // ========== FORMULÁRIO DINÂMICO (sem campo estabelecimento extra) ==========
+        // ========== FORMULÁRIO DINÂMICO ==========
         window.atualizarFormulario = function() {
             const tipo = document.getElementById('tipoRegistro').value;
             const container = document.getElementById('formDinamico');
@@ -298,402 +316,4 @@
                     <div class="form-group"><label>Km</label><input type="number" id="km_rec" required></div>
                     <div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorRec" required></div>
                     <div class="form-group">
-                        <label>🏢 Estabelecimento</label>
-                        <select id="tipoReceitaSelect" onchange="toggleTipoOutro()">${options}</select>
-                        <input type="text" id="tipoReceitaOutro" placeholder="Digite o nome" style="display:none; margin-top:4px;">
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-            const agora = new Date();
-            const offset = agora.getTimezoneOffset();
-            const local = new Date(agora.getTime() - offset * 60000);
-            const valorData = local.toISOString().slice(0,16);
-            const dateInput = document.querySelector('#formDinamico input[type="datetime-local"]');
-            if (dateInput) dateInput.value = valorData;
-            if (tipo === 'despesa') toggleCategoriaOutro();
-            if (tipo === 'receita') toggleTipoOutro();
-        };
-
-        window.calcularLitros = function() {
-            const preco = parseFloat(document.getElementById('precoLitro')?.value);
-            const valor = parseFloat(document.getElementById('valorAbast')?.value);
-            const litrosInput = document.getElementById('litros');
-            if (litrosInput && preco > 0 && valor > 0) litrosInput.value = (valor / preco).toFixed(2);
-        };
-
-        window.toggleCategoriaOutro = function() {
-            const select = document.getElementById('categoriaSelect');
-            const outro = document.getElementById('categoriaOutro');
-            if (select && outro) outro.style.display = select.value === 'Outro' ? 'block' : 'none';
-        };
-
-        window.toggleTipoOutro = function() {
-            const select = document.getElementById('tipoReceitaSelect');
-            const outro = document.getElementById('tipoReceitaOutro');
-            if (select && outro) outro.style.display = select.value === 'Outro' ? 'block' : 'none';
-        };
-
-        await carregarCategorias();
-        atualizarFormulario();
-
-        // ========== SALVAR REGISTRO (sem campo estabelecimento) ==========
-        window.salvarRegistro = async function() {
-            const tipo = document.getElementById('tipoRegistro').value;
-            let dados = { uid: USER_ID, veiculo: VEICULO };
-            try {
-                if (tipo === 'abastecimento') {
-                    const precoLitro = document.getElementById('precoLitro');
-                    const valorTotal = document.getElementById('valorAbast');
-                    const litros = document.getElementById('litros');
-                    if (!precoLitro || !valorTotal || !litros) throw new Error('Campos do abastecimento não encontrados.');
-                    dados = {
-                        ...dados,
-                        data: document.getElementById('data_abast').value,
-                        km: Number(document.getElementById('km_abast').value),
-                        litros: Number(litros.value),
-                        valor_total: Number(valorTotal.value),
-                        preco_litro: Number(precoLitro.value),
-                        posto: document.getElementById('posto').value,
-                        tanque_cheio: document.getElementById('tanqueCheio').checked
-                    };
-                } else if (tipo === 'despesa') {
-                    const catSelect = document.getElementById('categoriaSelect');
-                    const catOutro = document.getElementById('categoriaOutro');
-                    const categoria = catSelect.value === 'Outro' ? catOutro.value : catSelect.value;
-                    dados = {
-                        ...dados,
-                        data: document.getElementById('data_desp').value,
-                        km: Number(document.getElementById('km_desp').value),
-                        valor: Number(document.getElementById('valorDesp').value),
-                        descricao: document.getElementById('descricao').value,
-                        categoria: categoria
-                    };
-                } else if (tipo === 'receita') {
-                    const tipoSelect = document.getElementById('tipoReceitaSelect');
-                    const tipoOutro = document.getElementById('tipoReceitaOutro');
-                    const estabelecimento = tipoSelect.value === 'Outro' ? tipoOutro.value : tipoSelect.value;
-                    dados = {
-                        ...dados,
-                        data: document.getElementById('data_rec').value,
-                        km: Number(document.getElementById('km_rec').value),
-                        valor: Number(document.getElementById('valorRec').value),
-                        tipo: estabelecimento    // agora o campo 'tipo' é o estabelecimento
-                    };
-                }
-                const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
-                const novoRef = push(ref(db, colecao));
-                await set(novoRef, dados);
-                alert('✅ Registro salvo!');
-                atualizarFormulario();
-                if (document.getElementById('tab-historico').classList.contains('active')) renderHistorico();
-                if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
-            } catch (error) {
-                alert('❌ Erro ao salvar: ' + error.message);
-                console.error(error);
-            }
-        };
-
-        // ========== HISTÓRICO COM FILTRO POR TIPO (ESTABELECIMENTO) ==========
-        window.renderHistorico = async function() {
-            const lista = document.getElementById('historicoList');
-            const filtroTipo = document.getElementById('filtroTipo').value;
-            const filtroEstab = document.getElementById('filtroEstabelecimento').value.trim().toLowerCase();
-            const dataInicio = document.getElementById('filtroDataInicio').value;
-            const dataFim = document.getElementById('filtroDataFim').value;
-            const totalDiv = document.getElementById('totalFiltro');
-            lista.innerHTML = '<p class="empty-state">Carregando...</p>';
-            const colecoes = ['abastecimentos', 'despesas', 'receitas'];
-            let registros = [];
-            for (const col of colecoes) {
-                if (filtroTipo !== 'todos' && col !== filtroTipo + 's') continue;
-                const snap = await get(ref(db, col));
-                if (snap.exists()) {
-                    snap.forEach(child => {
-                        const dados = child.val();
-                        if (dados.veiculo === VEICULO || !dados.veiculo) {
-                            // Filtro por estabelecimento (agora usa o campo 'tipo' nas receitas)
-                            if (filtroEstab && col === 'receitas') {
-                                const tipoReceita = (dados.tipo || '').toLowerCase();
-                                if (!tipoReceita.includes(filtroEstab)) return;
-                            }
-                            // Filtro por data
-                            const dataRegistro = dados.data ? dados.data.slice(0,10) : '';
-                            if (dataInicio && dataRegistro < dataInicio) return;
-                            if (dataFim && dataRegistro > dataFim) return;
-                            registros.push({ id: child.key, tipoRegistro: col.slice(0,-1), ...dados });
-                        }
-                    });
-                }
-            }
-            registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
-            let totalFiltrado = 0;
-            registros.forEach(r => {
-                if (r.tipoRegistro === 'abastecimento') totalFiltrado += Number(r.valor_total);
-                else totalFiltrado += Number(r.valor || 0);
-            });
-            totalDiv.textContent = registros.length > 0 ? `Total: R$ ${totalFiltrado.toFixed(2)} (${registros.length} registros)` : '';
-            if (registros.length === 0) {
-                lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>';
-                return;
-            }
-            let html = '';
-            registros.forEach(r => {
-                const classe = r.tipoRegistro;
-                const dataFormatada = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
-                html += `<div class="result-item ${classe}" id="item-${r.id}">
-                    <div class="result-header">
-                        <div class="result-info">
-                            <strong>${r.tipoRegistro === 'abastecimento' ? '⛽ Abastecimento' : r.tipoRegistro === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
-                            <span>📅 ${dataFormatada} - Km: ${r.km}</span>
-                        </div>
-                        <div>
-                            <button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipoRegistro}', '${r.id}')">✏️</button>
-                            <button class="btn-outline btn-small" onclick="excluirRegistro('${r.tipoRegistro}', '${r.id}')">🗑️</button>
-                        </div>
-                    </div>
-                    <div style="margin-top:4px;">`;
-                if (r.tipoRegistro === 'abastecimento') {
-                    html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
-                    if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
-                } else if (r.tipoRegistro === 'despesa') {
-                    html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
-                    if (r.categoria) html += ` (${r.categoria})`;
-                } else if (r.tipoRegistro === 'receita') {
-                    html += `🏢 <strong>${r.tipo || 'Receita'}</strong> - R$ ${Number(r.valor).toFixed(2)} - Km: ${r.km}`;
-                }
-                html += `</div><div id="edit-${r.id}" class="edit-form" style="display:none;"></div></div>`;
-            });
-            lista.innerHTML = html;
-        };
-
-        // ========== EDITAR REGISTRO (sem campo estabelecimento extra) ==========
-        window.editarRegistro = async function(tipo, id) {
-            const editDiv = document.getElementById(`edit-${id}`);
-            if (editDiv.style.display === 'block') {
-                editDiv.style.display = 'none';
-                return;
-            }
-            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
-            const snap = await get(ref(db, `${colecao}/${id}`));
-            if (!snap.exists()) return;
-            const dados = snap.val();
-            let formHtml = '';
-            if (tipo === 'abastecimento') {
-                formHtml = `
-                    <input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}">
-                    <input type="number" id="edit-km-${id}" value="${dados.km}" placeholder="Km">
-                    <input type="number" step="0.001" id="edit-preco-${id}" value="${dados.preco_litro}" placeholder="Preço/L">
-                    <input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor_total}" placeholder="Valor total">
-                    <input type="number" step="0.01" id="edit-litros-${id}" value="${dados.litros}" placeholder="Litros">
-                    <input type="text" id="edit-posto-${id}" value="${dados.posto || ''}" placeholder="Posto">
-                    <label><input type="checkbox" id="edit-tanque-${id}" ${dados.tanque_cheio ? 'checked' : ''}> Tanque cheio?</label>
-                `;
-            } else if (tipo === 'despesa') {
-                const selectedCat = categoriasDespesa.includes(dados.categoria) ? dados.categoria : 'Outro';
-                const outroValue = selectedCat === 'Outro' ? dados.categoria || '' : '';
-                formHtml = `
-                    <input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}">
-                    <input type="number" id="edit-km-${id}" value="${dados.km}" placeholder="Km">
-                    <input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}" placeholder="Valor">
-                    <input type="text" id="edit-descricao-${id}" value="${dados.descricao || ''}" placeholder="Descrição">
-                    <select id="edit-categoria-${id}" onchange="toggleEditOutro('${id}')">
-                        ${categoriasDespesa.map(c => `<option value="${c}" ${c === selectedCat ? 'selected' : ''}>${c}</option>`).join('')}
-                        <option value="Outro" ${selectedCat === 'Outro' ? 'selected' : ''}>✏️ Outro</option>
-                    </select>
-                    <input type="text" id="edit-categoria-outro-${id}" value="${outroValue}" placeholder="Digite a categoria" style="display:${selectedCat === 'Outro' ? 'block' : 'none'}; margin-top:4px;">
-                `;
-            } else if (tipo === 'receita') {
-                const selectedTipo = categoriasReceita.includes(dados.tipo) ? dados.tipo : 'Outro';
-                const outroTipoValue = selectedTipo === 'Outro' ? dados.tipo || '' : '';
-                formHtml = `
-                    <input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}">
-                    <input type="number" id="edit-km-${id}" value="${dados.km}" placeholder="Km">
-                    <input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}" placeholder="Valor">
-                    <label>🏢 Estabelecimento</label>
-                    <select id="edit-tipo-${id}" onchange="toggleEditOutroTipo('${id}')">
-                        ${categoriasReceita.map(t => `<option value="${t}" ${t === selectedTipo ? 'selected' : ''}>${t}</option>`).join('')}
-                        <option value="Outro" ${selectedTipo === 'Outro' ? 'selected' : ''}>✏️ Outro</option>
-                    </select>
-                    <input type="text" id="edit-tipo-outro-${id}" value="${outroTipoValue}" placeholder="Digite o nome" style="display:${selectedTipo === 'Outro' ? 'block' : 'none'}; margin-top:4px;">
-                `;
-            }
-            formHtml += `<br><button class="btn-primary btn-small" onclick="salvarEdicao('${tipo}', '${id}')">💾 Salvar</button>`;
-            editDiv.innerHTML = formHtml;
-            editDiv.style.display = 'block';
-        };
-
-        window.toggleEditOutro = function(id) {
-            const select = document.getElementById(`edit-categoria-${id}`);
-            const outro = document.getElementById(`edit-categoria-outro-${id}`);
-            if (select && outro) outro.style.display = select.value === 'Outro' ? 'block' : 'none';
-        };
-
-        window.toggleEditOutroTipo = function(id) {
-            const select = document.getElementById(`edit-tipo-${id}`);
-            const outro = document.getElementById(`edit-tipo-outro-${id}`);
-            if (select && outro) outro.style.display = select.value === 'Outro' ? 'block' : 'none';
-        };
-
-        window.salvarEdicao = async function(tipo, id) {
-            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
-            const atualizacoes = {};
-            if (tipo === 'abastecimento') {
-                atualizacoes['data'] = document.getElementById(`edit-data-${id}`).value;
-                atualizacoes['km'] = Number(document.getElementById(`edit-km-${id}`).value);
-                atualizacoes['preco_litro'] = Number(document.getElementById(`edit-preco-${id}`).value);
-                atualizacoes['valor_total'] = Number(document.getElementById(`edit-valor-${id}`).value);
-                atualizacoes['litros'] = Number(document.getElementById(`edit-litros-${id}`).value);
-                atualizacoes['posto'] = document.getElementById(`edit-posto-${id}`).value;
-                atualizacoes['tanque_cheio'] = document.getElementById(`edit-tanque-${id}`).checked;
-            } else if (tipo === 'despesa') {
-                atualizacoes['data'] = document.getElementById(`edit-data-${id}`).value;
-                atualizacoes['km'] = Number(document.getElementById(`edit-km-${id}`).value);
-                atualizacoes['valor'] = Number(document.getElementById(`edit-valor-${id}`).value);
-                atualizacoes['descricao'] = document.getElementById(`edit-descricao-${id}`).value;
-                const catSelect = document.getElementById(`edit-categoria-${id}`);
-                const catOutro = document.getElementById(`edit-categoria-outro-${id}`);
-                atualizacoes['categoria'] = catSelect.value === 'Outro' ? catOutro.value : catSelect.value;
-            } else if (tipo === 'receita') {
-                atualizacoes['data'] = document.getElementById(`edit-data-${id}`).value;
-                atualizacoes['km'] = Number(document.getElementById(`edit-km-${id}`).value);
-                atualizacoes['valor'] = Number(document.getElementById(`edit-valor-${id}`).value);
-                const tipoSelect = document.getElementById(`edit-tipo-${id}`);
-                const tipoOutro = document.getElementById(`edit-tipo-outro-${id}`);
-                atualizacoes['tipo'] = tipoSelect.value === 'Outro' ? tipoOutro.value : tipoSelect.value;
-                // Não salvamos mais 'estabelecimento', pois o 'tipo' já é o estabelecimento
-            }
-            await update(ref(db, `${colecao}/${id}`), atualizacoes);
-            alert('✅ Alterações salvas!');
-            renderHistorico();
-            if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
-        };
-
-        window.excluirRegistro = async function(tipo, id) {
-            if (!confirm('Tem certeza que deseja excluir este registro?')) return;
-            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : tipo === 'despesa' ? 'despesas' : 'receitas';
-            await remove(ref(db, `${colecao}/${id}`));
-            alert('🗑️ Registro excluído.');
-            renderHistorico();
-            if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
-        };
-
-        // ========== DASHBOARD (inalterado) ==========
-        function calcularConsumoMedio(abastecimentos) {
-            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
-            if (tanquesCheios.length < 2) return 0;
-            tanquesCheios.sort((a, b) => a.data < b.data ? -1 : 1);
-            const ultimo = tanquesCheios[tanquesCheios.length - 1];
-            const penultimo = tanquesCheios[tanquesCheios.length - 2];
-            const kmPercorridos = ultimo.km - penultimo.km;
-            if (kmPercorridos <= 0) return 0;
-            const entre = abastecimentos.filter(a => a.data > penultimo.data && a.data <= ultimo.data);
-            const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
-            return totalLitros > 0 ? kmPercorridos / totalLitros : 0;
-        }
-
-        function custoPorKm(abastecimentos, despesas) {
-            const todos = [...abastecimentos, ...despesas];
-            if (todos.length < 2) return 0;
-            const kms = todos.map(r => r.km);
-            const kmTotal = Math.max(...kms) - Math.min(...kms);
-            if (kmTotal === 0) return 0;
-            const gastoTotal = abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0) + despesas.reduce((s, d) => s + Number(d.valor), 0);
-            return gastoTotal / kmTotal;
-        }
-
-        async function carregarDashboard() {
-            const abastSnap = await get(ref(db, 'abastecimentos'));
-            const despSnap = await get(ref(db, 'despesas'));
-            const recSnap = await get(ref(db, 'receitas'));
-            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) abastecimentos.push({ id: d.key, ...val }); });
-            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) despesas.push({ id: d.key, ...val }); });
-            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => { const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) receitas.push({ id: d.key, ...val }); });
-
-            const totalReceitas = receitas.reduce((s, r) => s + Number(r.valor), 0);
-            const totalDespesas = despesas.reduce((s, d) => s + Number(d.valor), 0) + abastecimentos.reduce((s, a) => s + Number(a.valor_total), 0);
-            document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
-            document.getElementById('custoKm').textContent = `R$ ${custoPorKm(abastecimentos, despesas).toFixed(2)}`;
-
-            const consumo = calcularConsumoMedio(abastecimentos);
-            document.getElementById('consumoMedio').textContent = `${consumo.toFixed(2)} km/l`;
-
-            let autonomia = 0;
-            if (consumo > 0 && abastecimentos.length > 0) {
-                const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
-                if (ultimo.tanque_cheio) autonomia = Math.round(consumo * ultimo.litros);
-            }
-            document.getElementById('autonomia').textContent = `${autonomia} km`;
-
-            const gastosPorMes = {};
-            [...abastecimentos, ...despesas].forEach(r => {
-                const [ano, mes] = r.data ? r.data.slice(0,10).split('-') : ['',''];
-                const mesAno = `${mes}/${ano}`;
-                const valor = r.valor_total || r.valor || 0;
-                gastosPorMes[mesAno] = (gastosPorMes[mesAno] || 0) + Number(valor);
-            });
-            const labelsGastos = Object.keys(gastosPorMes).sort((a, b) => {
-                const [mA, aA] = a.split('/'); const [mB, aB] = b.split('/');
-                return new Date(aA, mA-1) - new Date(aB, mB-1);
-            });
-            const dadosGastos = labelsGastos.map(l => gastosPorMes[l]);
-            const ctxGastos = document.getElementById('graficoGastos').getContext('2d');
-            if (chartGastos) chartGastos.destroy();
-            if (dadosGastos.length > 0) {
-                chartGastos = new Chart(ctxGastos, {
-                    type: 'bar', data: { labels: labelsGastos, datasets: [{ label: 'Gastos (R$)', data: dadosGastos, backgroundColor: '#e63946' }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#ffffff' } }, x: { ticks: { color: '#ffffff' } } }, plugins: { legend: { labels: { color: '#ffffff' } } } }
-                });
-            }
-
-            const receitasPorMes = {};
-            receitas.forEach(r => {
-                const [ano, mes] = r.data ? r.data.slice(0,10).split('-') : ['',''];
-                const mesAno = `${mes}/${ano}`;
-                const valor = r.valor || 0;
-                receitasPorMes[mesAno] = (receitasPorMes[mesAno] || 0) + Number(valor);
-            });
-            const labelsReceitas = Object.keys(receitasPorMes).sort((a, b) => {
-                const [mA, aA] = a.split('/'); const [mB, aB] = b.split('/');
-                return new Date(aA, mA-1) - new Date(aB, mB-1);
-            });
-            const dadosReceitas = labelsReceitas.map(l => receitasPorMes[l]);
-            const ctxReceitas = document.getElementById('graficoReceitas').getContext('2d');
-            if (chartReceitas) chartReceitas.destroy();
-            if (dadosReceitas.length > 0) {
-                chartReceitas = new Chart(ctxReceitas, {
-                    type: 'bar', data: { labels: labelsReceitas, datasets: [{ label: 'Receitas (R$)', data: dadosReceitas, backgroundColor: '#ffc107' }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#ffffff' } }, x: { ticks: { color: '#ffffff' } } }, plugins: { legend: { labels: { color: '#ffffff' } } } }
-                });
-            }
-        }
-
-        async function gerarLembretes() {
-            const div = document.getElementById('lembretesConteudo');
-            const abastSnap = await get(ref(db, 'abastecimentos'));
-            const abastecimentos = [];
-            if (abastSnap.exists()) abastSnap.forEach(d => {
-                const val = d.val(); if (val.veiculo === VEICULO || !val.veiculo) abastecimentos.push({ id: d.key, ...val });
-            });
-            if (abastecimentos.length === 0) {
-                div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>'; return;
-            }
-            const consumo = calcularConsumoMedio(abastecimentos);
-            if (consumo <= 0) {
-                div.innerHTML = '<p class="empty-state">Registre dois abastecimentos com tanque cheio para calcular a previsão.</p>'; return;
-            }
-            const ultimo = abastecimentos.reduce((a, b) => a.data > b.data ? a : b);
-            const autonomia = Math.round(consumo * ultimo.litros);
-            const kmLembrete = ultimo.km + autonomia;
-            div.innerHTML = `
-                <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
-                <p>⛽ Último abastecimento: <strong>${ultimo.km} km</strong> (${ultimo.litros}L)</p>
-                <p>🔔 Próximo abastecimento estimado: <strong>${kmLembrete} km</strong></p>
-            `;
-        }
-
-        // Inicialização
-        renderHistorico();
-    </script>
-</body>
-</html>
+            
