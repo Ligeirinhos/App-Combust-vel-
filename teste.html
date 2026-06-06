@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drivvo - Controle da Moto</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🏍️%3C/text%3E%3C/svg%3E">
+    <meta name="theme-color" content="#000000">
+    <style>
+        :root { --bg:#000; --card:#111; --primary:#e63946; --secondary:#f4a261; --text:#fff; --gold:#ffc107; --border:#333; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:12px; }
+        .container { max-width:800px; margin:0 auto; }
+        h1 { text-align:center; color:var(--primary); margin-bottom:5px; font-size:1.5em; }
+        .subtitle { text-align:center; color:var(--secondary); font-size:0.85em; margin-bottom:12px; }
+        .tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+        .tab { flex:1; padding:8px 6px; background:var(--card); border:2px solid transparent; color:var(--text); cursor:pointer; border-radius:8px; font-size:0.8em; text-align:center; transition:0.2s; }
+        .tab.active { border-color:var(--primary); background:var(--primary); color:white; font-weight:bold; }
+        .tab-content { display:none; } .tab-content.active { display:block; }
+        .card { background:var(--card); border-radius:12px; padding:15px; margin-bottom:12px; border:1px solid var(--border); }
+        .auth-section { max-width:350px; margin:40px auto; background:var(--card); padding:20px; border-radius:12px; border:1px solid var(--border); }
+        .auth-section input { width:100%; padding:10px; margin:6px 0; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; }
+        .auth-section button { width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:8px; }
+        .auth-section .toggle { background:none; color:var(--secondary); text-decoration:underline; margin-top:4px; }
+        .dashboard { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+        .dash-item { background:var(--card); padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border); }
+        .dash-item .number { font-size:1.6em; font-weight:bold; color:var(--gold); }
+        .dash-item .label { font-size:0.8em; color:var(--secondary); margin-top:4px; }
+        .resumo-section { margin-bottom:15px; }
+        .resumo-section h3 { color:var(--secondary); margin-bottom:8px; }
+        .resumo-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; }
+        .resumo-card { background:var(--bg); border-radius:10px; padding:10px; text-align:center; border:1px solid var(--border); }
+        .resumo-card .valor { font-size:1.2em; font-weight:bold; }
+        .resumo-card .periodo { font-size:0.7em; color:var(--secondary); }
+        .ganho .valor { color:#2ecc71; } .gasto .valor { color:var(--primary); } .saldo .valor { color:var(--gold); }
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .form-group { margin-bottom:6px; } .form-group.full { grid-column:1/-1; }
+        .form-group label { display:block; font-size:0.75em; color:var(--secondary); margin-bottom:2px; }
+        .form-group input, .form-group select { width:100%; padding:7px 8px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:0.85em; }
+        .checkbox-group { display:flex; align-items:center; gap:6px; }
+        .checkbox-group input[type="checkbox"] { width:16px; height:16px; accent-color:var(--primary); }
+        .btn { padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s; margin:3px; }
+        .btn-primary { background:var(--primary); color:white; } .btn-primary:hover { opacity:0.9; }
+        .btn-secondary { background:var(--secondary); color:black; } .btn-secondary:hover { opacity:0.9; }
+        .btn-outline { background:transparent; border:1px solid var(--primary); color:var(--primary); }
+        .btn-small { padding:4px 10px; font-size:0.75em; }
+        .result-item { background:var(--bg); padding:10px; border-radius:8px; margin-bottom:6px; border-left:4px solid var(--secondary); }
+        .result-item.abastecimento { border-left-color:var(--primary); }
+        .result-item.despesa { border-left-color:var(--gold); }
+        .result-item.receita { border-left-color:#2ecc71; }
+        .result-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+        .result-info strong { color:var(--secondary); display:block; }
+        .empty-state { text-align:center; opacity:0.5; padding:15px; }
+        .badge { display:inline-block; padding:2px 6px; border-radius:6px; font-size:0.7em; margin-left:4px; }
+        .total-geral { text-align:center; font-size:1em; color:var(--gold); margin-bottom:12px; }
+        .edit-form { background:var(--card); padding:12px; border-radius:8px; margin-top:8px; border:1px solid var(--border); }
+        .edit-form input, .edit-form select { width:100%; margin:4px 0; }
+        .categoria-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); }
+        .btn-delete-cat { background:none; border:none; color:#ef4444; font-size:18px; cursor:pointer; }
+        .add-cat-form { display:flex; gap:8px; margin-top:10px; }
+        .add-cat-form input { flex:1; }
+        .logout { float:right; background:none; border:1px solid var(--primary); color:var(--primary); padding:4px 12px; border-radius:6px; cursor:pointer; font-size:0.8em; }
+    </style>
+</head>
+<body>
+    <div class="container" id="appContainer">
+        <div id="authScreen" class="auth-section">
+            <h2 style="color:var(--primary);text-align:center;">🏍️ Drivvo - Moto</h2>
+            <p style="text-align:center;color:var(--secondary);">Faça login para acessar seus dados</p>
+            <input type="email" id="email" placeholder="E-mail">
+            <input type="password" id="password" placeholder="Senha">
+            <button class="btn-primary" id="btnLogin">Entrar</button>
+            <button class="toggle" id="btnToggle">Criar uma conta</button>
+            <p id="authError" style="color:#e63946;text-align:center;display:none;"></p>
+        </div>
+
+        <div id="mainScreen" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>🏍️ Drivvo - Moto</h1>
+                <button class="logout" id="btnLogout">Sair</button>
+            </div>
+            <p class="subtitle">Controle de abastecimentos, despesas e receitas</p>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="historico">📋 Histórico</button>
+                <button class="tab" data-tab="dashboard">📊 Dashboard</button>
+                <button class="tab" data-tab="novo">➕ Novo</button>
+                <button class="tab" data-tab="lembretes">🔔 Lembretes</button>
+                <button class="tab" data-tab="categorias">⚙️ Categorias</button>
+            </div>
+
+            <div class="tab-content active" id="tab-historico">
+                <div class="card">
+                    <h2>📋 Todos os Registros</h2>
+                    <div class="total-geral" id="totalGeral"></div>
+                    <div id="historicoList"></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-dashboard">
+                <!-- ... Dashboard permanece igual ao código anterior ... -->
+            </div>
+
+            <div class="tab-content" id="tab-novo">
+                <!-- ... Aba Novo permanece igual ... -->
+            </div>
+
+            <div class="tab-content" id="tab-lembretes">
+                <!-- ... Lembretes permanece igual ... -->
+            </div>
+
+            <div class="tab-content" id="tab-categorias">
+                <!-- ... Categorias permanece igual ... -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // ... (imports e configuração do Firebase iguais ao código anterior) ...
+
+        // ========== HISTÓRICO SEM FILTROS ==========
+        window.renderHistorico = async function() {
+            if (!currentUser) return;
+            const lista = document.getElementById('historicoList');
+            const totalDiv = document.getElementById('totalGeral');
+            lista.innerHTML = '<p class="empty-state">Carregando...</p>';
+            const colecoes = ['abastecimentos', 'despesas', 'receitas'];
+            let registros = [];
+            for (const col of colecoes) {
+                const snap = await get(ref(db, col));
+                if (snap.exists()) {
+                    snap.forEach(child => {
+                        const dados = child.val();
+                        if (dados.uid !== currentUser.uid) return;
+                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        registros.push({ id: child.key, tipoRegistro: col.slice(0,-1), ...dados });
+                    });
+                }
+            }
+            registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
+            let totalGeral = 0;
+            registros.forEach(r => { totalGeral += r.tipoRegistro === 'abastecimento' ? Number(r.valor_total) : Number(r.valor || 0); });
+            totalDiv.textContent = registros.length ? `Total geral: R$ ${totalGeral.toFixed(2)} (${registros.length} registros)` : '';
+            if (!registros.length) { lista.innerHTML = '<p class="empty-state">Nenhum registro encontrado.</p>'; return; }
+            let html = '';
+            registros.forEach(r => {
+                const classe = r.tipoRegistro;
+                const dataFmt = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
+                html += `<div class="result-item ${classe}" id="item-${r.id}">
+                    <div class="result-header">
+                        <div class="result-info">
+                            <strong>${r.tipoRegistro === 'abastecimento' ? '⛽ Abastecimento' : r.tipoRegistro === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
+                            <span>📅 ${dataFmt} - Km: ${r.km}</span>
+                        </div>
+                        <div>
+                            <button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipoRegistro}', '${r.id}')">✏️</button>
+                            <button class="btn-outline btn-small" onclick="excluirRegistro('${r.tipoRegistro}', '${r.id}')">🗑️</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:4px;">`;
+                if (r.tipoRegistro === 'abastecimento') {
+                    html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
+                    if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
+                } else if (r.tipoRegistro === 'despesa') {
+                    html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
+                    if (r.categoria) html += ` (${r.categoria})`;
+                } else if (r.tipoRegistro === 'receita') {
+                    html += `🏢 <strong>${r.tipo || 'Receita'}</strong> - R$ ${Number(r.valor).toFixed(2)} - Km: ${r.km}`;
+                }
+                html += `</div><div id="edit-${r.id}" class="edit-form" style="display:none;"></div></div>`;
+            });
+            lista.innerHTML = html;
+        };
+
+        // ... (restante do código: editar, excluir, dashboard, lembretes, etc. permanece igual) ...
+    </script>
+</body>
+</html>
