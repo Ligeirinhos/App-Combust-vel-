@@ -195,6 +195,7 @@
                                 <option value="todos">Todos</option>
                                 <option value="receita">💰 Receitas</option>
                                 <option value="despesa">💸 Despesas</option>
+                                <option value="abastecimento">⛽ Abastecimentos</option>
                             </select>
                         </div>
                         <div class="form-group" id="grupoEstabelecimento" style="display:none;">
@@ -256,6 +257,7 @@
         const db = getDatabase(app);
         const auth = getAuth(app);
         const VEICULO = 'Moto';
+        const CAPACIDADE_TANQUE = 12; // litros
         let currentUser = null;
         let categoriasDespesa = [];
         let categoriasReceita = [];
@@ -644,11 +646,12 @@
             }
             document.getElementById('consumoMedio').textContent = `${consumoMedio.toFixed(2)} km/l`;
 
-            // CORREÇÃO DA AUTONOMIA: usa último abastecimento, mesmo sem tanque cheio
+            // Autonomia: se tanque cheio, usa litros reais; senão, usa capacidade do tanque
             let autonomia = 0;
             if (consumoMedio > 0 && abastecimentos.length > 0) {
                 const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
-                autonomia = Math.round(consumoMedio * ultimoAbast.litros);
+                const litrosParaCalculo = ultimoAbast.tanque_cheio ? ultimoAbast.litros : CAPACIDADE_TANQUE;
+                autonomia = Math.round(consumoMedio * litrosParaCalculo);
             }
             document.getElementById('autonomia').textContent = `${autonomia} km`;
 
@@ -722,7 +725,7 @@
             div.innerHTML = `<p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p><p>⛽ Último abast: <strong>${ultimo.km} km</strong> (${ultimo.litros}L)</p><p>🔔 Próximo abastecimento: <strong>${kmLembrete} km</strong></p>`;
         }
 
-        // ========== NOVA FUNÇÃO: BUSCA ==========
+        // ========== BUSCA (COM FILTRO DE ABASTECIMENTO) ==========
         async function atualizarBusca() {
             if (!currentUser) return;
             const tipo = document.getElementById('buscaTipo').value;
@@ -783,9 +786,18 @@
                 }
             }
 
-            // Buscar dados
-            const colecoes = tipo === 'todos' ? ['receitas', 'despesas', 'abastecimentos'] :
-                             tipo === 'receita' ? ['receitas'] : ['despesas'];
+            // Define as coleções conforme o tipo
+            let colecoes;
+            if (tipo === 'todos') {
+                colecoes = ['receitas', 'despesas', 'abastecimentos'];
+            } else if (tipo === 'receita') {
+                colecoes = ['receitas'];
+            } else if (tipo === 'despesa') {
+                colecoes = categoria === 'todas' ? ['despesas', 'abastecimentos'] : ['despesas'];
+            } else if (tipo === 'abastecimento') {
+                colecoes = ['abastecimentos'];
+            }
+
             let ganhos = 0, gastos = 0;
             for (const col of colecoes) {
                 const snap = await get(ref(db, col));
