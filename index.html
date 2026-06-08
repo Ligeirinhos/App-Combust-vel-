@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drivvo - Controle da Moto</title>
+    <title>Controle da Moto</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🏍️%3C/text%3E%3C/svg%3E">
     <meta name="theme-color" content="#000000">
     <style>
@@ -85,7 +85,7 @@
 
         <div id="mainScreen" style="display:none;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h1>🏍️ Drivvo - Moto</h1>
+                <h1>🏍️ Controle da Moto</h1>
                 <button class="logout" id="btnLogout">Sair</button>
             </div>
             <p class="subtitle">Controle de abastecimentos, despesas e receitas</p>
@@ -703,28 +703,63 @@
 
         // ========== LEMBRETES ==========
         async function gerarLembretes() {
-            if (!currentUser) return;
-            const div = document.getElementById('lembretesConteudo');
-            const snap = await get(ref(db, 'abastecimentos'));
-            const abastecimentos = [];
-            if (snap.exists()) snap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
-            if (abastecimentos.length === 0) { div.innerHTML = '<p class="empty-state">Nenhum abastecimento.</p>'; return; }
-            const tanques = abastecimentos.filter(a => a.tanque_cheio);
-            if (tanques.length < 2) { div.innerHTML = '<p class="empty-state">Registre dois tanques cheios.</p>'; return; }
-            tanques.sort((a,b) => new Date(a.data) - new Date(b.data));
-            const ultimo = tanques[tanques.length-1];
-            const penultimo = tanques[tanques.length-2];
-            const kmPerc = ultimo.km - penultimo.km;
-            if (kmPerc <= 0) { div.innerHTML = '<p class="empty-state">Km inválido.</p>'; return; }
-            const entre = abastecimentos.filter(a => new Date(a.data) > new Date(penultimo.data) && new Date(a.data) <= new Date(ultimo.data));
-            const totalLitros = entre.reduce((s,a) => s + a.litros, 0);
-            const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
-            if (consumo <= 0) { div.innerHTML = '<p class="empty-state">Dados insuficientes.</p>'; return; }
-            const autonomia = Math.round(consumo * ultimo.litros);
-            const kmLembrete = ultimo.km + autonomia;
-            div.innerHTML = `<p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p><p>⛽ Último abast: <strong>${ultimo.km} km</strong> (${ultimo.litros}L)</p><p>🔔 Próximo abastecimento: <strong>${kmLembrete} km</strong></p>`;
-        }
+    if (!currentUser) return;
+    const div = document.getElementById('lembretesConteudo');
+    const snap = await get(ref(db, 'abastecimentos'));
+    const abastecimentos = [];
+    if (snap.exists()) {
+        snap.forEach(d => {
+            const v = d.val();
+            if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) {
+                abastecimentos.push(v);
+            }
+        });
+    }
 
+    if (abastecimentos.length === 0) {
+        div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
+        return;
+    }
+
+    // Ordena todos por data (mais recente primeiro)
+    abastecimentos.sort((a, b) => new Date(b.data) - new Date(a.data));
+    const ultimoAbast = abastecimentos[0]; // último geral
+
+    // Tanques cheios (para cálculo do consumo)
+    const tanques = abastecimentos.filter(a => a.tanque_cheio);
+
+    let html = `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
+
+    if (tanques.length < 2) {
+        html += '<p class="empty-state">Registre dois tanques cheios para calcular a previsão.</p>';
+    } else {
+        tanques.sort((a, b) => new Date(a.data) - new Date(b.data));
+        const ultimoTanque = tanques[tanques.length - 1];
+        const penultimoTanque = tanques[tanques.length - 2];
+        const kmPerc = ultimoTanque.km - penultimoTanque.km;
+        if (kmPerc <= 0) {
+            html += '<p class="empty-state">Quilometragem inválida para cálculo.</p>';
+        } else {
+            const entre = abastecimentos.filter(a => {
+                const d = new Date(a.data);
+                return d > new Date(penultimoTanque.data) && d <= new Date(ultimoTanque.data);
+            });
+            const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
+            const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
+            if (consumo <= 0) {
+                html += '<p class="empty-state">Dados insuficientes.</p>';
+            } else {
+                const autonomia = Math.round(consumo * ultimoTanque.litros);
+                const kmLembrete = ultimoTanque.km + autonomia;
+                html += `
+                    <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
+                    <p>🔔 Próximo abastecimento (tanque cheio): <strong>${kmLembrete} km</strong></p>
+                `;
+            }
+        }
+    }
+    div.innerHTML = html;
+}
         // ========== BUSCA (COM FILTRO DE ABASTECIMENTO) ==========
         async function atualizarBusca() {
             if (!currentUser) return;
