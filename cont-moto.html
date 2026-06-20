@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    <!-- APP PRINCIPAL (OCULTO ANTES DO LOGIN) -->
+    <!-- APP PRINCIPAL -->
     <div id="app-content" class="hidden">
         <!-- Header -->
         <header class="btn-gradient text-white p-6 rounded-b-[40px] shadow-2xl sticky top-0 z-10">
@@ -40,7 +40,6 @@
                 </div>
                 <button onclick="logout()" class="bg-white/20 p-2 rounded-full"><i class="fas fa-sign-out-alt"></i></button>
             </div>
-            
             <div class="mt-6 bg-white/10 p-4 rounded-2xl">
                 <p class="text-xs text-blue-100 uppercase tracking-wider text-center">Gasto Total Acumulado</p>
                 <p id="total-geral" class="text-4xl font-bold text-center mt-1 text-white">R$ 0,00</p>
@@ -57,17 +56,14 @@
             <!-- Formulário Rapidão -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-blue-50">
                 <h3 class="font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-plus-circle text-blue-500 mr-2"></i> Novo Registro
+                    <i class="fas fa-plus-circle text-blue-500 mr-2"></i> Nova Despesa
                 </h3>
                 <div class="space-y-3">
-                    <input type="text" id="desc" placeholder="Ex: Gasolina Aditivada" class="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-400 outline-none">
+                    <input type="text" id="desc" placeholder="Ex: Troca de óleo" class="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-400 outline-none">
                     <div class="flex gap-2">
                         <input type="number" id="valor" placeholder="Valor R$" class="w-1/2 p-3 bg-gray-50 border-none rounded-xl outline-none">
-                        <select id="tipo" class="w-1/2 p-3 bg-gray-50 border-none rounded-xl outline-none text-gray-500">
-                            <option value="Combustível">⛽ Combustível</option>
-                            <option value="Manutenção">🔧 Manutenção</option>
-                            <option value="Lavagem">🧼 Lavagem</option>
-                            <option value="Outros">📦 Outros</option>
+                        <select id="categoriaDespesa" class="w-1/2 p-3 bg-gray-50 border-none rounded-xl outline-none text-gray-500">
+                            <!-- Preenchido via JavaScript com as categorias do Firebase -->
                         </select>
                     </div>
                     <button onclick="salvarGasto()" class="w-full btn-gradient text-white py-3 rounded-xl font-bold">Salvar</button>
@@ -94,13 +90,16 @@
         </nav>
     </div>
 
-    <!-- LOGICA FIREBASE -->
+    <!-- LÓGICA FIREBASE (INTEGRADA COM O CONTROLE DA MOTO) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+        // Configuração completa (do Controle da Moto)
         const firebaseConfig = {
+            apiKey: "AIzaSyBP-7159WPs1q1lKRtW1c0BHjsLexZYQAM",
+            authDomain: "app-automotivo-b7788.firebaseapp.com",
             databaseURL: "https://app-automotivo-b7788-default-rtdb.firebaseio.com",
             projectId: "app-automotivo-b7788",
             storageBucket: "app-automotivo-b7788.firebasestorage.app",
@@ -114,8 +113,9 @@
 
         let currentUser = null;
         let chartInstance = null;
+        let todasCategoriasDespesa = [];
 
-        // AUTH HANDLER (Entrar ou Criar conta automaticamente)
+        // ==================== AUTENTICAÇÃO ====================
         window.handleAuth = async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -125,16 +125,19 @@
                 await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
                 if (error.code === 'auth/user-not-found') {
-                    await createUserWithEmailAndPassword(auth, email, password);
+                    try {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } catch (e) {
+                        msg.innerText = "Erro ao criar conta: " + e.message;
+                    }
                 } else {
-                    msg.innerText = "Erro ao entrar. Verifique os dados.";
+                    msg.innerText = "Erro ao entrar: " + error.message;
                 }
             }
         };
 
         window.logout = () => signOut(auth);
 
-        // OBSERVAR ESTADO DO USUARIO
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
@@ -142,65 +145,177 @@
                 document.getElementById('app-content').classList.remove('hidden');
                 document.getElementById('user-display').innerText = user.email.split('@')[0];
                 carregarDados();
+                carregarCategoriasDespesa();
             } else {
                 document.getElementById('login-screen').classList.remove('hidden');
                 document.getElementById('app-content').classList.add('hidden');
             }
         });
 
-        // SALVAR GASTO
+        // ==================== CARREGAR CATEGORIAS ====================
+        async function carregarCategoriasDespesa() {
+            const snap = await get(ref(db, 'categoriasDespesas'));
+            if (snap.exists()) {
+                todasCategoriasDespesa = Object.values(snap.val());
+            } else {
+                // Categorias padrão caso não existam no banco
+                todasCategoriasDespesa = ['Troca de óleo', 'Troca de pneu', 'Mecânico', 'Revisão', 'Seguro', 'Lavagem', 'Outros'];
+            }
+            const select = document.getElementById('categoriaDespesa');
+            select.innerHTML = todasCategoriasDespesa.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        }
+
+        // ==================== SALVAR GASTO (em despesas) ====================
         window.salvarGasto = () => {
-            const desc = document.getElementById('desc').value;
+            const desc = document.getElementById('desc').value.trim();
             const valor = parseFloat(document.getElementById('valor').value);
-            const tipo = document.getElementById('tipo').value;
+            const categoria = document.getElementById('categoriaDespesa').value;
 
-            if (!desc || !valor) return alert("Preencha tudo!");
+            if (!desc || isNaN(valor) || valor <= 0) {
+                alert("Preencha a descrição e um valor válido (maior que 0)");
+                return;
+            }
 
-            const dbRef = ref(db, `usuarios/${currentUser.uid}/gastos`);
-            push(dbRef, {
-                desc,
-                valor,
-                tipo,
-                data: new Date().toLocaleDateString('pt-BR')
+            const data = new Date().toISOString(); // formato ISO para compatibilidade
+            const km = 0; // opcional, pois o BioCar não pede km
+
+            push(ref(db, 'despesas'), {
+                uid: currentUser.uid,
+                veiculo: 'Moto', // pode ser genérico
+                data: data,
+                km: km,
+                valor: valor,
+                descricao: desc,
+                categoria: categoria
             });
 
             document.getElementById('desc').value = '';
             document.getElementById('valor').value = '';
         };
 
-        // EXCLUIR GASTO
-        window.excluirGasto = (id) => {
-            if(confirm("Deseja apagar este registro?")) {
-                remove(ref(db, `usuarios/${currentUser.uid}/gastos/${id}`));
-            }
+        // ==================== EXCLUIR GASTO ====================
+        window.excluirGasto = (colecao, id) => {
+            if (!confirm("Deseja apagar este registro?")) return;
+            remove(ref(db, `${colecao}/${id}`));
         };
 
-        // CARREGAR DADOS EM TEMPO REAL
+        // ==================== CARREGAR DADOS (ABASTECIMENTOS + DESPESAS) ====================
         function carregarDados() {
-            const dbRef = ref(db, `usuarios/${currentUser.uid}/gastos`);
-            onValue(dbRef, (snapshot) => {
-                const data = snapshot.val();
-                renderizarLista(data);
-                atualizarResumo(data);
-            });
+            if (!currentUser) return;
+
+            // Ouvir as três coleções e consolidar
+            const colecoes = ['abastecimentos', 'despesas', 'receitas'];
+            // Para cada coleção, usar onValue para atualizar em tempo real
+            // Vamos criar um listener combinado: cada vez que uma mudar, reconsolidamos
+            // Para simplificar, usamos uma função que lê todas e consolida.
+            // Mas para reatividade, podemos usar um único listener no caminho raiz? Melhor: escutar cada coleção e consolidar.
+            // Como são três, faremos uma função que é chamada por cada listener.
+            // Vamos usar um contador ou flag para não chamar múltiplas vezes.
+            let atualizando = false;
+
+            function consolidar() {
+                if (atualizando) return;
+                atualizando = true;
+                Promise.all([
+                    get(ref(db, 'abastecimentos')),
+                    get(ref(db, 'despesas')),
+                    get(ref(db, 'receitas'))
+                ]).then(([snapAbast, snapDesp, snapRec]) => {
+                    const registros = [];
+
+                    // Abastecimentos
+                    if (snapAbast.exists()) {
+                        snapAbast.forEach(child => {
+                            const dados = child.val();
+                            if (dados.uid !== currentUser.uid) return;
+                            if (dados.veiculo && dados.veiculo !== 'Moto') return; // opcional
+                            registros.push({
+                                id: child.key,
+                                colecao: 'abastecimentos',
+                                desc: `⛽ Abastecimento${dados.posto ? ' - ' + dados.posto : ''}`,
+                                valor: Number(dados.valor_total),
+                                tipo: 'Combustível',
+                                data: dados.data,
+                                // guardar original para excluir
+                                _orig: dados
+                            });
+                        });
+                    }
+
+                    // Despesas
+                    if (snapDesp.exists()) {
+                        snapDesp.forEach(child => {
+                            const dados = child.val();
+                            if (dados.uid !== currentUser.uid) return;
+                            if (dados.veiculo && dados.veiculo !== 'Moto') return;
+                            // Mapear categoria para os tipos do BioCar
+                            let tipo = 'Outros';
+                            const cat = dados.categoria || '';
+                            if (cat.includes('óleo') || cat.includes('pneu') || cat.includes('mecânico') || cat.includes('revisão') || cat.includes('seguro')) {
+                                tipo = 'Manutenção';
+                            } else if (cat.includes('lavagem') || cat.includes('lava')) {
+                                tipo = 'Lavagem';
+                            }
+                            registros.push({
+                                id: child.key,
+                                colecao: 'despesas',
+                                desc: dados.descricao || 'Despesa',
+                                valor: Number(dados.valor),
+                                tipo: tipo,
+                                data: dados.data,
+                                _orig: dados
+                            });
+                        });
+                    }
+
+                    // Receitas – ignoramos (não são gastos)
+                    // Se quiser exibir, pode descomentar, mas não entram no total
+                    
+                    // Ordenar por data (mais recente primeiro)
+                    registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
+
+                    renderizarLista(registros);
+                    atualizarResumo(registros);
+                    atualizando = false;
+                }).catch(err => {
+                    console.error('Erro ao consolidar:', err);
+                    atualizando = false;
+                });
+            }
+
+            // Escutar cada coleção
+            const abastRef = ref(db, 'abastecimentos');
+            const despRef = ref(db, 'despesas');
+            const recRef = ref(db, 'receitas');
+
+            onValue(abastRef, () => consolidar());
+            onValue(despRef, () => consolidar());
+            onValue(recRef, () => consolidar());
+
+            // Primeira carga
+            consolidar();
         }
 
-        function renderizarLista(data) {
+        // ==================== RENDERIZAR LISTA ====================
+        function renderizarLista(registros) {
             const container = document.getElementById('lista-gastos');
             container.innerHTML = '';
-            if (!data) return container.innerHTML = '<p class="text-center text-gray-400 py-10">Nenhum gasto registrado.</p>';
+            if (!registros || registros.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-10">Nenhum gasto registrado.</p>';
+                return;
+            }
 
-            Object.keys(data).reverse().forEach(key => {
-                const item = data[key];
+            registros.forEach(item => {
+                const dataFormatada = item.data ? new Date(item.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
                 container.innerHTML += `
                     <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center border-l-4 ${getColor(item.tipo)}">
                         <div>
                             <p class="font-bold text-gray-800">${item.desc}</p>
-                            <p class="text-[10px] text-gray-400 uppercase font-bold">${item.data} • ${item.tipo}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">${dataFormatada} • ${item.tipo}</p>
                         </div>
                         <div class="text-right">
                             <p class="font-bold text-blue-600">R$ ${item.valor.toFixed(2)}</p>
-                            <button onclick="excluirGasto('${key}')" class="text-red-300 text-xs mt-1 hover:text-red-500 transition">Remover</button>
+                            <button onclick="excluirGasto('${item.colecao}', '${item.id}')" class="text-red-300 text-xs mt-1 hover:text-red-500 transition">Remover</button>
                         </div>
                     </div>
                 `;
@@ -208,22 +323,23 @@
         }
 
         function getColor(tipo) {
-            if (tipo === 'Combustível') return 'border-green-500';
-            if (tipo === 'Manutenção') return 'border-orange-500';
-            if (tipo === 'Lavagem') return 'border-blue-500';
-            return 'border-gray-500';
+            const cores = {
+                'Combustível': 'border-green-500',
+                'Manutenção': 'border-orange-500',
+                'Lavagem': 'border-blue-500'
+            };
+            return cores[tipo] || 'border-gray-500';
         }
 
-        function atualizarResumo(data) {
+        // ==================== RESUMO E GRÁFICO ====================
+        function atualizarResumo(registros) {
             let total = 0;
             const categorias = { 'Combustível': 0, 'Manutenção': 0, 'Lavagem': 0, 'Outros': 0 };
 
-            if (data) {
-                Object.values(data).forEach(item => {
-                    total += item.valor;
-                    categorias[item.tipo] = (categorias[item.tipo] || 0) + item.valor;
-                });
-            }
+            registros.forEach(item => {
+                total += item.valor;
+                categorias[item.tipo] = (categorias[item.tipo] || 0) + item.valor;
+            });
 
             document.getElementById('total-geral').innerText = `R$ ${total.toFixed(2)}`;
             renderChart(categorias);
@@ -233,13 +349,24 @@
             const ctx = document.getElementById('chartGastos').getContext('2d');
             if (chartInstance) chartInstance.destroy();
 
+            // Filtrar categorias com valor zero para não aparecerem
+            const labels = Object.keys(categorias).filter(key => categorias[key] > 0);
+            const data = labels.map(key => categorias[key]);
+            const colors = {
+                'Combustível': '#10b981',
+                'Manutenção': '#f59e0b',
+                'Lavagem': '#3b82f6',
+                'Outros': '#94a3b8'
+            };
+            const backgroundColors = labels.map(key => colors[key] || '#94a3b8');
+
             chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(categorias),
+                    labels: labels,
                     datasets: [{
-                        data: Object.values(categorias),
-                        backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#94a3b8'],
+                        data: data,
+                        backgroundColor: backgroundColors,
                         borderWidth: 0,
                         hoverOffset: 10
                     }]
