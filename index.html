@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle da Moto</title>
+    <title>Controle de Gastos - Moto</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🏍️%3C/text%3E%3C/svg%3E">
     <meta name="theme-color" content="#000000">
     <style>
@@ -69,12 +69,13 @@
         .periodo-btns .btn.active { background: var(--primary); color: white; }
         .datas-personalizadas { display: flex; gap: 8px; margin-top: 8px; }
         .datas-personalizadas input { flex: 1; }
+        .chart-container { width: 100%; height: 300px; margin-top: 12px; }
     </style>
 </head>
 <body>
     <div class="container" id="appContainer">
         <div id="authScreen" class="auth-section">
-            <h2 style="color:var(--primary);text-align:center;">🏍️ Drivvo - Moto</h2>
+            <h2 style="color:var(--primary);text-align:center;">🏍️ Controle de Gastos</h2>
             <p style="text-align:center;color:var(--secondary);">Faça login para acessar seus dados</p>
             <input type="email" id="email" placeholder="E-mail">
             <input type="password" id="password" placeholder="Senha">
@@ -85,7 +86,7 @@
 
         <div id="mainScreen" style="display:none;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h1>🏍️ Controle da Moto</h1>
+                <h1>🏍️ Controle de Gastos</h1>
                 <button class="logout" id="btnLogout">Sair</button>
             </div>
             <p class="subtitle">Controle de abastecimentos, despesas e receitas</p>
@@ -93,6 +94,7 @@
             <div class="tabs">
                 <button class="tab active" data-tab="historico">📋 Histórico</button>
                 <button class="tab" data-tab="dashboard">📊 Dashboard</button>
+                <button class="tab" data-tab="graficos">📈 Gráficos</button>
                 <button class="tab" data-tab="novo">➕ Novo</button>
                 <button class="tab" data-tab="lembretes">🔔 Lembretes</button>
                 <button class="tab" data-tab="categorias">⚙️ Categorias</button>
@@ -139,6 +141,16 @@
                         <div class="resumo-card saldo"><div class="valor" id="saldoSemana">R$0</div><div class="periodo">Semana</div></div>
                         <div class="resumo-card saldo"><div class="valor" id="saldoMes">R$0</div><div class="periodo">Mês</div></div>
                         <div class="resumo-card saldo"><div class="valor" id="saldoAno">R$0</div><div class="periodo">Ano</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOVA ABA GRÁFICOS -->
+            <div class="tab-content" id="tab-graficos">
+                <div class="card">
+                    <h2>📈 Evolução Mensal</h2>
+                    <div class="chart-container">
+                        <canvas id="graficoMensal"></canvas>
                     </div>
                 </div>
             </div>
@@ -238,6 +250,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -257,10 +270,11 @@
         const db = getDatabase(app);
         const auth = getAuth(app);
         const VEICULO = 'Moto';
-        const CAPACIDADE_TANQUE = 12; // litros
+        const CAPACIDADE_TANQUE = 12;
         let currentUser = null;
         let categoriasDespesa = [];
         let categoriasReceita = [];
+        let chartMensal = null;
 
         const authScreen = document.getElementById('authScreen');
         const mainScreen = document.getElementById('mainScreen');
@@ -322,6 +336,7 @@
                     else if (tabName === 'categorias') renderizarListaCategorias();
                     else if (tabName === 'novo') atualizarFormulario();
                     else if (tabName === 'busca') prepararBusca();
+                    else if (tabName === 'graficos') carregarGraficoMensal();
                 });
             });
         }
@@ -646,12 +661,15 @@
             }
             document.getElementById('consumoMedio').textContent = `${consumoMedio.toFixed(2)} km/l`;
 
-            // Autonomia: se tanque cheio, usa litros reais; senão, usa capacidade do tanque
+            // Autonomia CORRIGIDA: usa último abastecimento (qualquer) se houver consumo médio
             let autonomia = 0;
             if (consumoMedio > 0 && abastecimentos.length > 0) {
                 const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
-                const litrosParaCalculo = ultimoAbast.tanque_cheio ? ultimoAbast.litros : CAPACIDADE_TANQUE;
-                autonomia = Math.round(consumoMedio * litrosParaCalculo);
+                autonomia = Math.round(consumoMedio * ultimoAbast.litros);
+            } else if (abastecimentos.length > 0) {
+                // sem consumo médio, usa capacidade do tanque como fallback
+                const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+                autonomia = Math.round((ultimoAbast.litros / CAPACIDADE_TANQUE) * CAPACIDADE_TANQUE); // apenas repete o último
             }
             document.getElementById('autonomia').textContent = `${autonomia} km`;
 
@@ -703,63 +721,52 @@
 
         // ========== LEMBRETES ==========
         async function gerarLembretes() {
-    if (!currentUser) return;
-    const div = document.getElementById('lembretesConteudo');
-    const snap = await get(ref(db, 'abastecimentos'));
-    const abastecimentos = [];
-    if (snap.exists()) {
-        snap.forEach(d => {
-            const v = d.val();
-            if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) {
-                abastecimentos.push(v);
+            if (!currentUser) return;
+            const div = document.getElementById('lembretesConteudo');
+            const snap = await get(ref(db, 'abastecimentos'));
+            const abastecimentos = [];
+            if (snap.exists()) {
+                snap.forEach(d => {
+                    const v = d.val();
+                    if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v);
+                });
             }
-        });
-    }
+            if (abastecimentos.length === 0) {
+                div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
+                return;
+            }
+            abastecimentos.sort((a, b) => new Date(b.data) - new Date(a.data));
+            const ultimoAbast = abastecimentos[0];
+            let html = `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
 
-    if (abastecimentos.length === 0) {
-        div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
-        return;
-    }
-
-    // Ordena todos por data (mais recente primeiro)
-    abastecimentos.sort((a, b) => new Date(b.data) - new Date(a.data));
-    const ultimoAbast = abastecimentos[0]; // último geral
-
-    // Tanques cheios (para cálculo do consumo)
-    const tanques = abastecimentos.filter(a => a.tanque_cheio);
-
-    let html = `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
-
-    if (tanques.length < 2) {
-        html += '<p class="empty-state">Registre dois tanques cheios para calcular a previsão.</p>';
-    } else {
-        tanques.sort((a, b) => new Date(a.data) - new Date(b.data));
-        const ultimoTanque = tanques[tanques.length - 1];
-        const penultimoTanque = tanques[tanques.length - 2];
-        const kmPerc = ultimoTanque.km - penultimoTanque.km;
-        if (kmPerc <= 0) {
-            html += '<p class="empty-state">Quilometragem inválida para cálculo.</p>';
-        } else {
-            const entre = abastecimentos.filter(a => {
-                const d = new Date(a.data);
-                return d > new Date(penultimoTanque.data) && d <= new Date(ultimoTanque.data);
-            });
-            const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
-            const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
-            if (consumo <= 0) {
-                html += '<p class="empty-state">Dados insuficientes.</p>';
+            const tanques = abastecimentos.filter(a => a.tanque_cheio);
+            if (tanques.length >= 2) {
+                tanques.sort((a, b) => new Date(a.data) - new Date(b.data));
+                const ultimoTanque = tanques[tanques.length - 1];
+                const penultimoTanque = tanques[tanques.length - 2];
+                const kmPerc = ultimoTanque.km - penultimoTanque.km;
+                if (kmPerc > 0) {
+                    const entre = abastecimentos.filter(a => {
+                        const d = new Date(a.data);
+                        return d > new Date(penultimoTanque.data) && d <= new Date(ultimoTanque.data);
+                    });
+                    const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
+                    const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
+                    if (consumo > 0) {
+                        // Previsão baseada no último abastecimento (não apenas tanque cheio)
+                        const previsao = Math.round(consumo * ultimoAbast.litros);
+                        html += `
+                            <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
+                            <p>🔔 Próximo abastecimento: <strong>${ultimoAbast.km + previsao} km</strong> (baseado em ${ultimoAbast.litros}L)</p>
+                        `;
+                    }
+                }
             } else {
-                const autonomia = Math.round(consumo * ultimoTanque.litros);
-                const kmLembrete = ultimoTanque.km + autonomia;
-                html += `
-                    <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
-                    <p>🔔 Próximo abastecimento (tanque cheio): <strong>${kmLembrete} km</strong></p>
-                `;
+                html += '<p class="empty-state">Registre dois tanques cheios para calcular o consumo médio.</p>';
             }
+            div.innerHTML = html;
         }
-    }
-    div.innerHTML = html;
-}
+
         // ========== BUSCA (COM FILTRO DE ABASTECIMENTO) ==========
         async function atualizarBusca() {
             if (!currentUser) return;
@@ -821,7 +828,6 @@
                 }
             }
 
-            // Define as coleções conforme o tipo
             let colecoes;
             if (tipo === 'todos') {
                 colecoes = ['receitas', 'despesas', 'abastecimentos'];
@@ -877,6 +883,84 @@
                 atualizarBusca();
             });
         });
+
+        // ========== GRÁFICO MENSAL ==========
+        async function carregarGraficoMensal() {
+            if (!currentUser) return;
+            const [abastSnap, despSnap, recSnap] = await Promise.all([
+                get(ref(db, 'abastecimentos')),
+                get(ref(db, 'despesas')),
+                get(ref(db, 'receitas'))
+            ]);
+            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
+            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
+            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) receitas.push(v); });
+
+            // Agrupar por mês/ano
+            const meses = {};
+            const todos = [...receitas.map(r => ({ ...r, tipoValor: 'ganho' })), ...abastecimentos.map(a => ({ ...a, valor: a.valor_total, tipoValor: 'gasto' })), ...despesas.map(d => ({ ...d, tipoValor: 'gasto' }))];
+            todos.forEach(item => {
+                if (!item.data) return;
+                const d = new Date(item.data);
+                const chave = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!meses[chave]) meses[chave] = { ganhos: 0, gastos: 0 };
+                if (item.tipoValor === 'ganho') meses[chave].ganhos += Number(item.valor);
+                else meses[chave].gastos += Number(item.valor || 0);
+            });
+
+            const chavesOrdenadas = Object.keys(meses).sort();
+            const labels = chavesOrdenadas.map(ch => {
+                const [ano, mes] = ch.split('-');
+                return `${mes}/${ano}`;
+            });
+            const dadosGanhos = chavesOrdenadas.map(ch => meses[ch].ganhos);
+            const dadosGastos = chavesOrdenadas.map(ch => meses[ch].gastos);
+
+            const ctx = document.getElementById('graficoMensal').getContext('2d');
+            if (chartMensal) chartMensal.destroy();
+            chartMensal = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Receitas',
+                            data: dadosGanhos,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Gastos',
+                            data: dadosGastos,
+                            borderColor: '#e63946',
+                            backgroundColor: 'rgba(230, 57, 70, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#ffffff' }
+                        },
+                        x: {
+                            ticks: { color: '#ffffff' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
