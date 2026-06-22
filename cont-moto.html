@@ -3,100 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BioCar Pro - Gestão Inteligente</title>
+    <title>BioCar Pro - Avançado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-        body { font-family: 'Poppins', sans-serif; background-color: #f0f2f5; }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        .btn-gradient { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
+        * { box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #f1f5f9; transition: 0.3s; }
+        body.dark { background: #0f172a; color: #e2e8f0; }
+        .card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .dark .card { background: #1e293b; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); }
+        .btn-gradient { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
+        .btn-gradient:hover { opacity: 0.9; }
+        .tab-btn { padding: 8px 16px; border-radius: 30px; font-weight: 600; transition: 0.2s; cursor: pointer; background: transparent; color: #64748b; border: 2px solid transparent; }
+        .tab-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+        .dark .tab-btn.active { background: #3b82f6; border-color: #3b82f6; }
+        .dark .tab-btn { color: #94a3b8; }
         .hidden { display: none; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7em; font-weight: 600; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-red { background: #fee2e2; color: #991b1b; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .dark .badge-green { background: #166534; color: #dcfce7; }
+        .dark .badge-red { background: #991b1b; color: #fee2e2; }
+        .dark .badge-blue { background: #1e40af; color: #dbeafe; }
+        .auth-section { max-width: 400px; margin: 40px auto; }
+        .auth-section input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 12px; border: 1px solid #cbd5e1; background: white; }
+        .dark .auth-section input { background: #1e293b; border-color: #334155; color: white; }
+        .btn-toggle { background: none; border: none; color: #2563eb; text-decoration: underline; cursor: pointer; margin-top: 8px; }
+        .dark .btn-toggle { color: #60a5fa; }
+        .filtro-periodo { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+        .filtro-periodo .btn { flex: 1; min-width: 60px; font-size: 0.7em; padding: 4px 8px; border-radius: 20px; border: 1px solid #cbd5e1; background: transparent; cursor: pointer; }
+        .filtro-periodo .btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+        .dark .filtro-periodo .btn { border-color: #475569; color: #cbd5e1; }
+        .dark .filtro-periodo .btn.active { background: #3b82f6; border-color: #3b82f6; }
+        .timeline-item { border-left: 4px solid; padding-left: 12px; margin-bottom: 12px; }
+        .timeline-item.abastecimento { border-color: #10b981; }
+        .timeline-item.despesa { border-color: #f59e0b; }
+        .timeline-item.receita { border-color: #3b82f6; }
+        .dark .timeline-item { border-left-color: #475569; }
+        @media (max-width: 640px) { .grid-cols-2 { grid-template-columns: 1fr; } }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-24">
+<body>
+    <div id="root" class="min-h-screen p-4 transition-colors">
+        <!-- LOGIN -->
+        <div id="login-screen" class="auth-section">
+            <div class="card text-center">
+                <div class="text-5xl mb-4">🚗</div>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-white">BioCar Pro</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Gerencie seus gastos com veículos</p>
+                <input type="email" id="email" placeholder="E-mail" class="mt-4">
+                <input type="password" id="password" placeholder="Senha">
+                <button onclick="handleAuth()" class="w-full btn-gradient py-3 rounded-xl font-bold mt-3">Entrar / Cadastrar</button>
+                <button id="toggle-auth" class="btn-toggle">Criar uma conta</button>
+                <p id="auth-msg" class="text-red-500 text-sm mt-2"></p>
+            </div>
+        </div>
 
-    <!-- TELA DE LOGIN -->
-    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-6">
-        <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md text-center">
-            <div class="text-5xl mb-4">🚗</div>
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">BioCar Pro</h1>
-            <input type="email" id="email" placeholder="E-mail" class="w-full p-3 mb-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-            <input type="password" id="password" placeholder="Senha" class="w-full p-3 mb-6 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-            <button onclick="handleAuth()" class="w-full btn-gradient text-white py-3 rounded-xl font-bold shadow-lg">Entrar / Cadastrar</button>
-            <p id="auth-msg" class="text-red-500 text-sm mt-4"></p>
+        <!-- APP -->
+        <div id="app-content" class="hidden max-w-5xl mx-auto">
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800 dark:text-white">🚗 BioCar Pro</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Olá, <span id="user-display"></span></p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleTheme()" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                        <i id="theme-icon" class="fas fa-moon"></i>
+                    </button>
+                    <button onclick="logout()" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Abas -->
+            <div class="flex flex-wrap gap-1 mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+                <button class="tab-btn" data-tab="historico">📋 Histórico</button>
+                <button class="tab-btn" data-tab="graficos">📈 Gráficos</button>
+                <button class="tab-btn" data-tab="lembretes">🔔 Lembretes</button>
+                <button class="tab-btn" data-tab="novo">➕ Novo</button>
+            </div>
+
+            <!-- Conteúdo -->
+            <div id="tab-dashboard" class="tab-content">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div class="card"><div class="text-xs text-gray-500 dark:text-gray-400">Saldo</div><div class="text-xl font-bold text-blue-600 dark:text-blue-400" id="saldoAtual">R$ 0,00</div></div>
+                    <div class="card"><div class="text-xs text-gray-500 dark:text-gray-400">Ganhos (mês)</div><div class="text-xl font-bold text-green-600 dark:text-green-400" id="ganhoMes">R$ 0,00</div></div>
+                    <div class="card"><div class="text-xs text-gray-500 dark:text-gray-400">Gastos (mês)</div><div class="text-xl font-bold text-red-600 dark:text-red-400" id="gastoMes">R$ 0,00</div></div>
+                    <div class="card"><div class="text-xs text-gray-500 dark:text-gray-400">Custo/km</div><div class="text-xl font-bold text-yellow-600 dark:text-yellow-400" id="custoKm">R$ 0,00</div></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                    <div class="card"><div class="text-xs text-gray-500 dark:text-gray-400">Consumo médio</div><div class="text-lg font-bold" id="consumoMedio">0 km/l</div></div>
+                    <div class="card"><div class="text-xs text-gray-500 dark:text-gray-400">Autonomia</div><div class="text-lg font-bold" id="autonomia">0 km</div></div>
+                    <div class="card"><div class="text-xs text-gray-500 dark:text-gray-400">Total registros</div><div class="text-lg font-bold" id="totalRegistros">0</div></div>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold mb-2">Resumo por Categoria</h3>
+                    <div id="resumoCategorias" class="grid grid-cols-2 gap-2"></div>
+                </div>
+            </div>
+
+            <div id="tab-historico" class="tab-content hidden">
+                <div class="card">
+                    <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                        <h3 class="font-bold">Histórico Completo</h3>
+                        <div class="flex gap-2">
+                            <button onclick="exportarCSV()" class="btn-gradient text-xs py-1 px-3 rounded-full">📥 CSV</button>
+                            <button onclick="filtrarPeriodo('todos')" class="text-xs bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600">Todos</button>
+                        </div>
+                    </div>
+                    <div class="filtro-periodo" id="periodoFiltro">
+                        <button class="btn active" data-periodo="todos">Todos</button>
+                        <button class="btn" data-periodo="hoje">Hoje</button>
+                        <button class="btn" data-periodo="semana">Semana</button>
+                        <button class="btn" data-periodo="mes">Mês</button>
+                        <button class="btn" data-periodo="ano">Ano</button>
+                        <button class="btn" data-periodo="personalizado">Personalizado</button>
+                    </div>
+                    <div id="datasPersonalizadas" class="hidden flex gap-2 mt-2">
+                        <input type="date" id="dataInicio" class="border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600">
+                        <input type="date" id="dataFim" class="border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600">
+                        <button onclick="aplicarDataPersonalizada()" class="btn-gradient text-xs py-1 px-3 rounded-full">Filtrar</button>
+                    </div>
+                    <div id="listaHistorico" class="space-y-2 mt-3 max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <div id="tab-graficos" class="tab-content hidden">
+                <div class="card">
+                    <h3 class="font-bold mb-2">Evolução Mensal (Gastos + Receitas)</h3>
+                    <canvas id="chartEvolucao" height="180"></canvas>
+                </div>
+                <div class="card mt-3">
+                    <h3 class="font-bold mb-2">Distribuição por Categoria</h3>
+                    <canvas id="chartCategorias" height="180"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-lembretes" class="tab-content hidden">
+                <div class="card">
+                    <h3 class="font-bold">🔔 Lembretes e Previsões</h3>
+                    <div id="conteudoLembretes" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+
+            <div id="tab-novo" class="tab-content hidden">
+                <div class="card">
+                    <h3 class="font-bold mb-3">➕ Novo Registro</h3>
+                    <div class="space-y-3">
+                        <select id="tipoRegistro" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                            <option value="abastecimento">⛽ Abastecimento</option>
+                            <option value="despesa">💸 Despesa</option>
+                            <option value="receita">💰 Receita</option>
+                        </select>
+                        <div id="formDinamico"></div>
+                        <button onclick="salvarRegistro()" class="w-full btn-gradient py-2 rounded-xl font-bold">Salvar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- APP PRINCIPAL -->
-    <div id="app-content" class="hidden">
-        <!-- Header -->
-        <header class="btn-gradient text-white p-6 rounded-b-[40px] shadow-2xl sticky top-0 z-10">
-            <div class="flex justify-between items-center">
-                <div>
-                    <p class="text-blue-100 text-xs">Bem-vindo,</p>
-                    <h2 id="user-display" class="font-bold">Motorista</h2>
-                </div>
-                <button onclick="logout()" class="bg-white/20 p-2 rounded-full"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
-            <div class="mt-6 bg-white/10 p-4 rounded-2xl">
-                <p class="text-xs text-blue-100 uppercase tracking-wider text-center">Gasto Total Acumulado</p>
-                <p id="total-geral" class="text-4xl font-bold text-center mt-1 text-white">R$ 0,00</p>
-            </div>
-        </header>
-
-        <main class="p-4 space-y-6">
-            <!-- Gráfico -->
-            <div class="bg-white p-4 rounded-3xl shadow-sm">
-                <h3 class="text-gray-500 text-xs font-bold mb-4 uppercase">Distribuição de Gastos</h3>
-                <canvas id="chartGastos" height="150"></canvas>
-            </div>
-
-            <!-- Formulário Rapidão -->
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-blue-50">
-                <h3 class="font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-plus-circle text-blue-500 mr-2"></i> Nova Despesa
-                </h3>
-                <div class="space-y-3">
-                    <input type="text" id="desc" placeholder="Ex: Troca de óleo" class="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-400 outline-none">
-                    <div class="flex gap-2">
-                        <input type="number" id="valor" placeholder="Valor R$" class="w-1/2 p-3 bg-gray-50 border-none rounded-xl outline-none">
-                        <select id="categoriaDespesa" class="w-1/2 p-3 bg-gray-50 border-none rounded-xl outline-none text-gray-500">
-                            <!-- Preenchido via JavaScript com as categorias do Firebase -->
-                        </select>
-                    </div>
-                    <button onclick="salvarGasto()" class="w-full btn-gradient text-white py-3 rounded-xl font-bold">Salvar</button>
-                </div>
-            </div>
-
-            <!-- Lista de Histórico -->
-            <div class="space-y-3 pb-10">
-                <div class="flex justify-between items-center px-2">
-                    <h3 class="font-bold text-gray-700">Histórico</h3>
-                    <span class="text-xs text-blue-500 font-bold">Ver tudo</span>
-                </div>
-                <div id="lista-gastos" class="space-y-3">
-                    <!-- Gerado via JS -->
-                </div>
-            </div>
-        </main>
-
-        <!-- Menu Navegação -->
-        <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t flex justify-around p-4 shadow-2xl">
-            <button class="text-blue-600"><i class="fas fa-home text-xl"></i></button>
-            <button class="text-gray-400" onclick="alert('Relatórios Detalhados em breve')"><i class="fas fa-chart-line text-xl"></i></button>
-            <button class="text-gray-400" onclick="alert('Garagem: Gerencie seus carros')"><i class="fas fa-car text-xl"></i></button>
-        </nav>
-    </div>
-
-    <!-- LÓGICA FIREBASE (INTEGRADA COM O CONTROLE DA MOTO) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getDatabase, ref, push, onValue, remove, get, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-        // Configuração completa (do Controle da Moto)
         const firebaseConfig = {
             apiKey: "AIzaSyBP-7159WPs1q1lKRtW1c0BHjsLexZYQAM",
             authDomain: "app-automotivo-b7788.firebaseapp.com",
@@ -112,273 +189,527 @@
         const auth = getAuth(app);
 
         let currentUser = null;
-        let chartInstance = null;
-        let todasCategoriasDespesa = [];
+        let todosRegistros = [];
+        let categoriasDespesa = [];
+        let categoriasReceita = [];
+        let chartEvolucao = null, chartCategorias = null;
+        let periodoAtual = 'todos';
 
-        // ==================== AUTENTICAÇÃO ====================
+        // DOM
+        const loginScreen = document.getElementById('login-screen');
+        const appContent = document.getElementById('app-content');
+        const authMsg = document.getElementById('auth-msg');
+
+        // ========== AUTH ==========
         window.handleAuth = async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const msg = document.getElementById('auth-msg');
-
+            const isSignUp = document.getElementById('toggle-auth').dataset.signup === 'true';
             try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                if (error.code === 'auth/user-not-found') {
-                    try {
-                        await createUserWithEmailAndPassword(auth, email, password);
-                    } catch (e) {
-                        msg.innerText = "Erro ao criar conta: " + e.message;
-                    }
-                } else {
-                    msg.innerText = "Erro ao entrar: " + error.message;
-                }
+                if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
+                else await signInWithEmailAndPassword(auth, email, password);
+                authMsg.style.display = 'none';
+            } catch (e) {
+                authMsg.textContent = e.message;
+                authMsg.style.display = 'block';
             }
         };
+
+        document.getElementById('toggle-auth').addEventListener('click', function() {
+            const isSignUp = this.dataset.signup === 'true';
+            this.dataset.signup = !isSignUp;
+            this.textContent = isSignUp ? 'Criar uma conta' : 'Já tenho conta';
+            document.querySelector('#login-screen .btn-gradient').textContent = isSignUp ? 'Entrar' : 'Cadastrar';
+        });
 
         window.logout = () => signOut(auth);
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
-                document.getElementById('user-display').innerText = user.email.split('@')[0];
-                carregarDados();
-                carregarCategoriasDespesa();
+                loginScreen.style.display = 'none';
+                appContent.style.display = 'block';
+                document.getElementById('user-display').textContent = user.email.split('@')[0];
+                inicializarApp();
             } else {
-                document.getElementById('login-screen').classList.remove('hidden');
-                document.getElementById('app-content').classList.add('hidden');
+                loginScreen.style.display = 'block';
+                appContent.style.display = 'none';
             }
         });
 
-        // ==================== CARREGAR CATEGORIAS ====================
-        async function carregarCategoriasDespesa() {
-            const snap = await get(ref(db, 'categoriasDespesas'));
-            if (snap.exists()) {
-                todasCategoriasDespesa = Object.values(snap.val());
-            } else {
-                // Categorias padrão caso não existam no banco
-                todasCategoriasDespesa = ['Troca de óleo', 'Troca de pneu', 'Mecânico', 'Revisão', 'Seguro', 'Lavagem', 'Outros'];
-            }
-            const select = document.getElementById('categoriaDespesa');
-            select.innerHTML = todasCategoriasDespesa.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-        }
+        // ========== TEMA ==========
+        window.toggleTheme = () => {
+            document.body.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if (document.body.classList.contains('dark')) icon.className = 'fas fa-sun';
+            else icon.className = 'fas fa-moon';
+        };
 
-        // ==================== SALVAR GASTO (em despesas) ====================
-        window.salvarGasto = () => {
-            const desc = document.getElementById('desc').value.trim();
-            const valor = parseFloat(document.getElementById('valor').value);
-            const categoria = document.getElementById('categoriaDespesa').value;
-
-            if (!desc || isNaN(valor) || valor <= 0) {
-                alert("Preencha a descrição e um valor válido (maior que 0)");
-                return;
-            }
-
-            const data = new Date().toISOString(); // formato ISO para compatibilidade
-            const km = 0; // opcional, pois o BioCar não pede km
-
-            push(ref(db, 'despesas'), {
-                uid: currentUser.uid,
-                veiculo: 'Moto', // pode ser genérico
-                data: data,
-                km: km,
-                valor: valor,
-                descricao: desc,
-                categoria: categoria
+        // ========== ABAS ==========
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.dataset.tab;
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`tab-${tab}`).classList.remove('hidden');
+                if (tab === 'dashboard') atualizarDashboard();
+                else if (tab === 'historico') renderizarHistorico();
+                else if (tab === 'graficos') renderizarGraficos();
+                else if (tab === 'lembretes') gerarLembretes();
+                else if (tab === 'novo') atualizarFormulario();
             });
+        });
 
-            document.getElementById('desc').value = '';
-            document.getElementById('valor').value = '';
-        };
-
-        // ==================== EXCLUIR GASTO ====================
-        window.excluirGasto = (colecao, id) => {
-            if (!confirm("Deseja apagar este registro?")) return;
-            remove(ref(db, `${colecao}/${id}`));
-        };
-
-        // ==================== CARREGAR DADOS (ABASTECIMENTOS + DESPESAS) ====================
-        function carregarDados() {
-            if (!currentUser) return;
-
-            // Ouvir as três coleções e consolidar
+        // ========== INICIALIZAR ==========
+        async function inicializarApp() {
+            await carregarCategorias();
+            carregarDadosRealtime();
+            // Escuta mudanças para atualizar tudo
             const colecoes = ['abastecimentos', 'despesas', 'receitas'];
-            // Para cada coleção, usar onValue para atualizar em tempo real
-            // Vamos criar um listener combinado: cada vez que uma mudar, reconsolidamos
-            // Para simplificar, usamos uma função que lê todas e consolida.
-            // Mas para reatividade, podemos usar um único listener no caminho raiz? Melhor: escutar cada coleção e consolidar.
-            // Como são três, faremos uma função que é chamada por cada listener.
-            // Vamos usar um contador ou flag para não chamar múltiplas vezes.
-            let atualizando = false;
-
-            function consolidar() {
-                if (atualizando) return;
-                atualizando = true;
-                Promise.all([
-                    get(ref(db, 'abastecimentos')),
-                    get(ref(db, 'despesas')),
-                    get(ref(db, 'receitas'))
-                ]).then(([snapAbast, snapDesp, snapRec]) => {
-                    const registros = [];
-
-                    // Abastecimentos
-                    if (snapAbast.exists()) {
-                        snapAbast.forEach(child => {
-                            const dados = child.val();
-                            if (dados.uid !== currentUser.uid) return;
-                            if (dados.veiculo && dados.veiculo !== 'Moto') return; // opcional
-                            registros.push({
-                                id: child.key,
-                                colecao: 'abastecimentos',
-                                desc: `⛽ Abastecimento${dados.posto ? ' - ' + dados.posto : ''}`,
-                                valor: Number(dados.valor_total),
-                                tipo: 'Combustível',
-                                data: dados.data,
-                                // guardar original para excluir
-                                _orig: dados
-                            });
-                        });
-                    }
-
-                    // Despesas
-                    if (snapDesp.exists()) {
-                        snapDesp.forEach(child => {
-                            const dados = child.val();
-                            if (dados.uid !== currentUser.uid) return;
-                            if (dados.veiculo && dados.veiculo !== 'Moto') return;
-                            // Mapear categoria para os tipos do BioCar
-                            let tipo = 'Outros';
-                            const cat = dados.categoria || '';
-                            if (cat.includes('óleo') || cat.includes('pneu') || cat.includes('mecânico') || cat.includes('revisão') || cat.includes('seguro')) {
-                                tipo = 'Manutenção';
-                            } else if (cat.includes('lavagem') || cat.includes('lava')) {
-                                tipo = 'Lavagem';
-                            }
-                            registros.push({
-                                id: child.key,
-                                colecao: 'despesas',
-                                desc: dados.descricao || 'Despesa',
-                                valor: Number(dados.valor),
-                                tipo: tipo,
-                                data: dados.data,
-                                _orig: dados
-                            });
-                        });
-                    }
-
-                    // Receitas – ignoramos (não são gastos)
-                    // Se quiser exibir, pode descomentar, mas não entram no total
-                    
-                    // Ordenar por data (mais recente primeiro)
-                    registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
-
-                    renderizarLista(registros);
-                    atualizarResumo(registros);
-                    atualizando = false;
-                }).catch(err => {
-                    console.error('Erro ao consolidar:', err);
-                    atualizando = false;
+            colecoes.forEach(col => {
+                onValue(ref(db, col), () => {
+                    carregarDadosRealtime();
                 });
-            }
-
-            // Escutar cada coleção
-            const abastRef = ref(db, 'abastecimentos');
-            const despRef = ref(db, 'despesas');
-            const recRef = ref(db, 'receitas');
-
-            onValue(abastRef, () => consolidar());
-            onValue(despRef, () => consolidar());
-            onValue(recRef, () => consolidar());
-
-            // Primeira carga
-            consolidar();
-        }
-
-        // ==================== RENDERIZAR LISTA ====================
-        function renderizarLista(registros) {
-            const container = document.getElementById('lista-gastos');
-            container.innerHTML = '';
-            if (!registros || registros.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-400 py-10">Nenhum gasto registrado.</p>';
-                return;
-            }
-
-            registros.forEach(item => {
-                const dataFormatada = item.data ? new Date(item.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-                container.innerHTML += `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center border-l-4 ${getColor(item.tipo)}">
-                        <div>
-                            <p class="font-bold text-gray-800">${item.desc}</p>
-                            <p class="text-[10px] text-gray-400 uppercase font-bold">${dataFormatada} • ${item.tipo}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold text-blue-600">R$ ${item.valor.toFixed(2)}</p>
-                            <button onclick="excluirGasto('${item.colecao}', '${item.id}')" class="text-red-300 text-xs mt-1 hover:text-red-500 transition">Remover</button>
-                        </div>
-                    </div>
-                `;
             });
         }
 
-        function getColor(tipo) {
-            const cores = {
-                'Combustível': 'border-green-500',
-                'Manutenção': 'border-orange-500',
-                'Lavagem': 'border-blue-500'
-            };
-            return cores[tipo] || 'border-gray-500';
+        async function carregarCategorias() {
+            const snapDesp = await get(ref(db, 'categoriasDespesas'));
+            categoriasDespesa = snapDesp.exists() ? Object.values(snapDesp.val()) : ['Manutenção', 'Lavagem', 'Seguro', 'Outros'];
+            const snapRec = await get(ref(db, 'categoriasReceitas'));
+            categoriasReceita = snapRec.exists() ? Object.values(snapRec.val()) : ['Particular', 'Freelance', 'Outros'];
         }
 
-        // ==================== RESUMO E GRÁFICO ====================
-        function atualizarResumo(registros) {
-            let total = 0;
-            const categorias = { 'Combustível': 0, 'Manutenção': 0, 'Lavagem': 0, 'Outros': 0 };
-
-            registros.forEach(item => {
-                total += item.valor;
-                categorias[item.tipo] = (categorias[item.tipo] || 0) + item.valor;
+        function carregarDadosRealtime() {
+            if (!currentUser) return;
+            Promise.all([
+                get(ref(db, 'abastecimentos')),
+                get(ref(db, 'despesas')),
+                get(ref(db, 'receitas'))
+            ]).then(([snapAbast, snapDesp, snapRec]) => {
+                const registros = [];
+                const uid = currentUser.uid;
+                if (snapAbast.exists()) {
+                    snapAbast.forEach(child => {
+                        const d = child.val();
+                        if (d.uid === uid && (!d.veiculo || d.veiculo === 'Moto')) {
+                            registros.push({ id: child.key, colecao: 'abastecimentos', tipo: 'abastecimento', ...d });
+                        }
+                    });
+                }
+                if (snapDesp.exists()) {
+                    snapDesp.forEach(child => {
+                        const d = child.val();
+                        if (d.uid === uid && (!d.veiculo || d.veiculo === 'Moto')) {
+                            registros.push({ id: child.key, colecao: 'despesas', tipo: 'despesa', ...d });
+                        }
+                    });
+                }
+                if (snapRec.exists()) {
+                    snapRec.forEach(child => {
+                        const d = child.val();
+                        if (d.uid === uid && (!d.veiculo || d.veiculo === 'Moto')) {
+                            registros.push({ id: child.key, colecao: 'receitas', tipo: 'receita', ...d });
+                        }
+                    });
+                }
+                todosRegistros = registros;
+                atualizarTodasViews();
             });
-
-            document.getElementById('total-geral').innerText = `R$ ${total.toFixed(2)}`;
-            renderChart(categorias);
         }
 
-        function renderChart(categorias) {
-            const ctx = document.getElementById('chartGastos').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
+        function atualizarTodasViews() {
+            if (document.getElementById('tab-dashboard').classList.contains('hidden') === false) atualizarDashboard();
+            if (document.getElementById('tab-historico').classList.contains('hidden') === false) renderizarHistorico();
+            if (document.getElementById('tab-graficos').classList.contains('hidden') === false) renderizarGraficos();
+            if (document.getElementById('tab-lembretes').classList.contains('hidden') === false) gerarLembretes();
+        }
 
-            // Filtrar categorias com valor zero para não aparecerem
-            const labels = Object.keys(categorias).filter(key => categorias[key] > 0);
-            const data = labels.map(key => categorias[key]);
-            const colors = {
-                'Combustível': '#10b981',
-                'Manutenção': '#f59e0b',
-                'Lavagem': '#3b82f6',
-                'Outros': '#94a3b8'
-            };
-            const backgroundColors = labels.map(key => colors[key] || '#94a3b8');
+        // ========== FILTRO POR PERÍODO ==========
+        function filtrarRegistros(periodo, dataInicio = null, dataFim = null) {
+            const agora = new Date();
+            let inicio, fim;
+            if (periodo === 'todos') {
+                return todosRegistros;
+            } else if (periodo === 'hoje') {
+                inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+                fim = new Date(inicio);
+                fim.setDate(fim.getDate() + 1);
+            } else if (periodo === 'semana') {
+                const dia = agora.getDay() === 0 ? 7 : agora.getDay();
+                inicio = new Date(agora);
+                inicio.setDate(agora.getDate() - dia + 1);
+                inicio.setHours(0,0,0,0);
+                fim = new Date(inicio);
+                fim.setDate(inicio.getDate() + 7);
+            } else if (periodo === 'mes') {
+                inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+                fim = new Date(agora.getFullYear(), agora.getMonth() + 1, 1);
+            } else if (periodo === 'ano') {
+                inicio = new Date(agora.getFullYear(), 0, 1);
+                fim = new Date(agora.getFullYear() + 1, 0, 1);
+            } else if (periodo === 'personalizado') {
+                if (!dataInicio || !dataFim) return todosRegistros;
+                inicio = new Date(dataInicio);
+                fim = new Date(dataFim);
+                fim.setDate(fim.getDate() + 1);
+            }
+            return todosRegistros.filter(r => {
+                if (!r.data) return false;
+                const d = new Date(r.data);
+                return d >= inicio && d < fim;
+            });
+        }
 
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: backgroundColors,
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    plugins: { 
-                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
-                    },
-                    cutout: '70%'
+        // ========== DASHBOARD ==========
+        function atualizarDashboard() {
+            const filtrados = filtrarRegistros('mes'); // mês atual
+            let ganhos = 0, gastos = 0;
+            const categorias = {};
+            let totalRegistros = filtrados.length;
+            filtrados.forEach(r => {
+                if (r.tipo === 'receita') ganhos += Number(r.valor);
+                else if (r.tipo === 'abastecimento') {
+                    gastos += Number(r.valor_total);
+                    const cat = 'Combustível';
+                    categorias[cat] = (categorias[cat] || 0) + Number(r.valor_total);
+                } else if (r.tipo === 'despesa') {
+                    gastos += Number(r.valor);
+                    const cat = r.categoria || 'Outros';
+                    categorias[cat] = (categorias[cat] || 0) + Number(r.valor);
                 }
             });
+            document.getElementById('saldoAtual').textContent = `R$ ${(ganhos - gastos).toFixed(2)}`;
+            document.getElementById('ganhoMes').textContent = `R$ ${ganhos.toFixed(2)}`;
+            document.getElementById('gastoMes').textContent = `R$ ${gastos.toFixed(2)}`;
+            document.getElementById('totalRegistros').textContent = totalRegistros;
+
+            // Custo/km
+            const abastecimentos = todosRegistros.filter(r => r.tipo === 'abastecimento' && r.km);
+            const despesas = todosRegistros.filter(r => r.tipo === 'despesa' && r.km);
+            const todosKm = [...abastecimentos, ...despesas];
+            if (todosKm.length >= 2) {
+                const kms = todosKm.map(r => Number(r.km)).filter(k => !isNaN(k));
+                const maxKm = Math.max(...kms);
+                const minKm = Math.min(...kms);
+                const totalGastos = gastos; // já calculado
+                const custo = (maxKm - minKm) > 0 ? totalGastos / (maxKm - minKm) : 0;
+                document.getElementById('custoKm').textContent = `R$ ${custo.toFixed(2)}`;
+            } else {
+                document.getElementById('custoKm').textContent = 'R$ 0,00';
+            }
+
+            // Consumo médio
+            const tanques = abastecimentos.filter(a => a.tanque_cheio).sort((a,b) => new Date(a.data) - new Date(b.data));
+            let consumo = 0;
+            if (tanques.length >= 2) {
+                const ultimo = tanques[tanques.length-1];
+                const penultimo = tanques[tanques.length-2];
+                const kmPerc = ultimo.km - penultimo.km;
+                if (kmPerc > 0) {
+                    const entre = abastecimentos.filter(a => new Date(a.data) > new Date(penultimo.data) && new Date(a.data) <= new Date(ultimo.data));
+                    const totalLitros = entre.reduce((s,a) => s + Number(a.litros), 0);
+                    consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
+                }
+            }
+            document.getElementById('consumoMedio').textContent = `${consumo.toFixed(2)} km/l`;
+
+            // Autonomia
+            let autonomia = 0;
+            if (consumo > 0 && abastecimentos.length > 0) {
+                const ultimo = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+                const litros = ultimo.tanque_cheio ? Number(ultimo.litros) : 12; // tanque padrão
+                autonomia = Math.round(consumo * litros);
+            }
+            document.getElementById('autonomia').textContent = `${autonomia} km`;
+
+            // Resumo categorias
+            const container = document.getElementById('resumoCategorias');
+            container.innerHTML = '';
+            const sorted = Object.entries(categorias).sort((a,b) => b[1] - a[1]);
+            sorted.forEach(([cat, val]) => {
+                container.innerHTML += `<div class="flex justify-between border-b border-gray-100 dark:border-gray-700 py-1 text-sm"><span>${cat}</span><span class="font-bold">R$ ${val.toFixed(2)}</span></div>`;
+            });
+            if (sorted.length === 0) container.innerHTML = '<p class="text-gray-400 text-sm">Nenhum gasto no mês.</p>';
         }
+
+        // ========== HISTÓRICO ==========
+        function renderizarHistorico() {
+            const container = document.getElementById('listaHistorico');
+            const filtrados = filtrarRegistros(periodoAtual);
+            if (filtrados.length === 0) {
+                container.innerHTML = '<p class="text-gray-400">Nenhum registro encontrado.</p>';
+                return;
+            }
+            let html = '';
+            filtrados.sort((a,b) => new Date(b.data) - new Date(a.data));
+            filtrados.forEach(r => {
+                const dataFmt = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
+                let desc = '';
+                let valor = 0;
+                if (r.tipo === 'abastecimento') {
+                    desc = `⛽ ${r.posto || 'Abastecimento'} - ${r.litros}L`;
+                    valor = Number(r.valor_total);
+                } else if (r.tipo === 'despesa') {
+                    desc = `💸 ${r.descricao || 'Despesa'} (${r.categoria || 'Outros'})`;
+                    valor = Number(r.valor);
+                } else if (r.tipo === 'receita') {
+                    desc = `💰 ${r.tipo || 'Receita'}`;
+                    valor = Number(r.valor);
+                }
+                const classe = r.tipo === 'abastecimento' ? 'abastecimento' : r.tipo === 'despesa' ? 'despesa' : 'receita';
+                html += `<div class="timeline-item ${classe} flex justify-between items-center">
+                    <div><span class="font-semibold">${desc}</span><br><span class="text-xs text-gray-500 dark:text-gray-400">${dataFmt} - Km: ${r.km || '-'}</span></div>
+                    <div><span class="font-bold ${r.tipo === 'receita' ? 'text-green-600' : 'text-red-600'}">R$ ${valor.toFixed(2)}</span>
+                    <button onclick="excluirRegistro('${r.colecao}', '${r.id}')" class="ml-2 text-red-400 hover:text-red-600"><i class="fas fa-trash-alt"></i></button></div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        window.excluirRegistro = async (colecao, id) => {
+            if (!confirm('Excluir este registro?')) return;
+            await remove(ref(db, `${colecao}/${id}`));
+            // Os listeners atualizarão automaticamente
+        };
+
+        // Filtro de período
+        document.querySelectorAll('#periodoFiltro .btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('#periodoFiltro .btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                periodoAtual = this.dataset.periodo;
+                document.getElementById('datasPersonalizadas').style.display = periodoAtual === 'personalizado' ? 'flex' : 'none';
+                renderizarHistorico();
+            });
+        });
+
+        window.aplicarDataPersonalizada = () => {
+            const inicio = document.getElementById('dataInicio').value;
+            const fim = document.getElementById('dataFim').value;
+            if (inicio && fim) {
+                // Reaplica o filtro
+                renderizarHistorico();
+            }
+        };
+
+        // Sobrescrever filtrarRegistros para aceitar datas personalizadas
+        const _originalFiltrar = filtrarRegistros;
+        filtrarRegistros = function(periodo, dataInicio, dataFim) {
+            if (periodo === 'personalizado') {
+                const inicio = document.getElementById('dataInicio').value;
+                const fim = document.getElementById('dataFim').value;
+                if (!inicio || !fim) return todosRegistros;
+                const dIni = new Date(inicio);
+                const dFim = new Date(fim);
+                dFim.setDate(dFim.getDate() + 1);
+                return todosRegistros.filter(r => {
+                    if (!r.data) return false;
+                    const d = new Date(r.data);
+                    return d >= dIni && d < dFim;
+                });
+            }
+            return _originalFiltrar(periodo);
+        };
+
+        // ========== GRÁFICOS ==========
+        function renderizarGraficos() {
+            // Evolução mensal
+            const ctx1 = document.getElementById('chartEvolucao').getContext('2d');
+            const ctx2 = document.getElementById('chartCategorias').getContext('2d');
+
+            const meses = {};
+            todosRegistros.forEach(r => {
+                if (!r.data) return;
+                const mes = new Date(r.data).toLocaleString('pt-BR', { month: 'short', year: 'numeric' });
+                if (!meses[mes]) meses[mes] = { receitas: 0, gastos: 0 };
+                const valor = r.tipo === 'receita' ? Number(r.valor) : (r.tipo === 'abastecimento' ? Number(r.valor_total) : Number(r.valor));
+                if (r.tipo === 'receita') meses[mes].receitas += valor;
+                else meses[mes].gastos += valor;
+            });
+            const labels = Object.keys(meses).sort((a,b) => new Date(a) - new Date(b));
+            const dataReceitas = labels.map(m => meses[m].receitas);
+            const dataGastos = labels.map(m => meses[m].gastos);
+
+            if (chartEvolucao) chartEvolucao.destroy();
+            chartEvolucao = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Receitas', data: dataReceitas, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3 },
+                        { label: 'Gastos', data: dataGastos, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            });
+
+            // Categorias
+            const cats = {};
+            todosRegistros.filter(r => r.tipo !== 'receita').forEach(r => {
+                let cat = 'Outros';
+                if (r.tipo === 'abastecimento') cat = 'Combustível';
+                else if (r.categoria) cat = r.categoria;
+                const valor = r.tipo === 'abastecimento' ? Number(r.valor_total) : Number(r.valor);
+                cats[cat] = (cats[cat] || 0) + valor;
+            });
+            const catLabels = Object.keys(cats);
+            const catData = catLabels.map(k => cats[k]);
+
+            if (chartCategorias) chartCategorias.destroy();
+            chartCategorias = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: catLabels,
+                    datasets: [{
+                        data: catData,
+                        backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#94a3b8'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'right' } }, cutout: '70%' }
+            });
+        }
+
+        // ========== LEMBRETES ==========
+        function gerarLembretes() {
+            const div = document.getElementById('conteudoLembretes');
+            const abastecimentos = todosRegistros.filter(r => r.tipo === 'abastecimento');
+            if (abastecimentos.length === 0) {
+                div.innerHTML = '<p>Nenhum abastecimento registrado.</p>';
+                return;
+            }
+            const ultimo = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+            let html = `<p>⛽ Último abastecimento: ${ultimo.km} km - ${ultimo.litros}L</p>`;
+            const tanques = abastecimentos.filter(a => a.tanque_cheio).sort((a,b) => new Date(a.data) - new Date(b.data));
+            if (tanques.length >= 2) {
+                const ultT = tanques[tanques.length-1];
+                const penT = tanques[tanques.length-2];
+                const kmPerc = ultT.km - penT.km;
+                if (kmPerc > 0) {
+                    const entre = abastecimentos.filter(a => new Date(a.data) > new Date(penT.data) && new Date(a.data) <= new Date(ultT.data));
+                    const totalLitros = entre.reduce((s,a) => s + Number(a.litros), 0);
+                    const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
+                    const autonomia = Math.round(consumo * ultT.litros);
+                    const proximoKm = ultT.km + autonomia;
+                    html += `<p>📏 Consumo médio: ${consumo.toFixed(2)} km/l</p>`;
+                    html += `<p>🔔 Próximo abastecimento (tanque cheio): <strong>${proximoKm} km</strong></p>`;
+                }
+            } else {
+                html += '<p>Registre dois tanques cheios para previsão.</p>';
+            }
+            div.innerHTML = html;
+        }
+
+        // ========== FORMULÁRIO NOVO ==========
+        function atualizarFormulario() {
+            const tipo = document.getElementById('tipoRegistro').value;
+            const container = document.getElementById('formDinamico');
+            let html = '';
+            if (tipo === 'abastecimento') {
+                html = `
+                    <input type="datetime-local" id="data_abast" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" id="km_abast" placeholder="Km atual" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="0.001" id="precoLitro" placeholder="Preço/L (R$)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="0.01" id="valorAbast" placeholder="Valor total (R$)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="0.01" id="litros" placeholder="Litros" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="text" id="posto" placeholder="Posto" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <label class="flex items-center gap-2"><input type="checkbox" id="tanqueCheio"> Tanque cheio?</label>
+                `;
+            } else if (tipo === 'despesa') {
+                const opts = categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('');
+                html = `
+                    <input type="datetime-local" id="data_desp" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" id="km_desp" placeholder="Km" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="0.01" id="valorDesp" placeholder="Valor (R$)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="text" id="descricao" placeholder="Descrição" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <select id="categoriaSelect" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">${opts}</select>
+                `;
+            } else if (tipo === 'receita') {
+                const opts = categoriasReceita.map(c => `<option value="${c}">${c}</option>`).join('');
+                html = `
+                    <input type="datetime-local" id="data_rec" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" id="km_rec" placeholder="Km" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="0.01" id="valorRec" placeholder="Valor (R$)" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <select id="tipoReceitaSelect" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">${opts}</select>
+                `;
+            }
+            container.innerHTML = html;
+            // Preencher data atual
+            const agora = new Date();
+            const offset = agora.getTimezoneOffset();
+            const local = new Date(agora.getTime() - offset * 60000);
+            const dateInput = container.querySelector('input[type="datetime-local"]');
+            if (dateInput) dateInput.value = local.toISOString().slice(0,16);
+        }
+
+        window.salvarRegistro = async () => {
+            const tipo = document.getElementById('tipoRegistro').value;
+            const dados = { uid: currentUser.uid, veiculo: 'Moto' };
+            try {
+                if (tipo === 'abastecimento') {
+                    dados.data = document.getElementById('data_abast').value;
+                    dados.km = Number(document.getElementById('km_abast').value);
+                    dados.preco_litro = Number(document.getElementById('precoLitro').value);
+                    dados.valor_total = Number(document.getElementById('valorAbast').value);
+                    dados.litros = Number(document.getElementById('litros').value);
+                    dados.posto = document.getElementById('posto').value;
+                    dados.tanque_cheio = document.getElementById('tanqueCheio').checked;
+                    await push(ref(db, 'abastecimentos'), dados);
+                } else if (tipo === 'despesa') {
+                    dados.data = document.getElementById('data_desp').value;
+                    dados.km = Number(document.getElementById('km_desp').value);
+                    dados.valor = Number(document.getElementById('valorDesp').value);
+                    dados.descricao = document.getElementById('descricao').value;
+                    dados.categoria = document.getElementById('categoriaSelect').value;
+                    await push(ref(db, 'despesas'), dados);
+                } else if (tipo === 'receita') {
+                    dados.data = document.getElementById('data_rec').value;
+                    dados.km = Number(document.getElementById('km_rec').value);
+                    dados.valor = Number(document.getElementById('valorRec').value);
+                    dados.tipo = document.getElementById('tipoReceitaSelect').value;
+                    await push(ref(db, 'receitas'), dados);
+                }
+                alert('✅ Registro salvo!');
+                atualizarFormulario();
+            } catch (e) {
+                alert('Erro: ' + e.message);
+            }
+        };
+
+        // ========== EXPORTAR CSV ==========
+        window.exportarCSV = () => {
+            const registros = filtrarRegistros(periodoAtual);
+            if (registros.length === 0) return alert('Nenhum dado para exportar.');
+            let csv = 'Data,Tipo,Descrição,Valor,Km\n';
+            registros.forEach(r => {
+                const data = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
+                let desc = '';
+                let valor = 0;
+                if (r.tipo === 'abastecimento') {
+                    desc = `Abastecimento ${r.posto || ''}`;
+                    valor = Number(r.valor_total);
+                } else if (r.tipo === 'despesa') {
+                    desc = `${r.descricao || ''} (${r.categoria || ''})`;
+                    valor = Number(r.valor);
+                } else if (r.tipo === 'receita') {
+                    desc = `Receita ${r.tipo || ''}`;
+                    valor = Number(r.valor);
+                }
+                csv += `"${data}","${r.tipo}","${desc}","${valor.toFixed(2)}","${r.km || ''}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `biocar_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // Inicializar formulário na primeira abertura
+        document.querySelector('[data-tab="novo"]').addEventListener('click', atualizarFormulario);
     </script>
 </body>
 </html>
