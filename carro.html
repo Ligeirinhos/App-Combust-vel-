@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos - Carro</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🚗%3C/text%3E%3C/svg%3E">
+    <meta name="theme-color" content="#000000">
+
+    <!-- PWA: Manifest -->
+    <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Controle%20de%20Gastos%20-%20Carro%22%2C%22short_name%22%3A%22Gastos%20Carro%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000%22%2C%22theme_color%22%3A%22%23000%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48Y2lyY2xlIGN4PSc1MCcgY3k9JzUwJyByPSc0NScgZmlsbD0nJTIzZTYzOTQ2Jy8%2BPHRleHQgeT0nLjc1ZW0nIGZvbnQtc2l6ZT0nNjAnIHg9JzUwJScgdGV4dC1hbmNob3I9J21pZGRsZSc%2B8J%2BWl%2FwvdGV4dD48L3N2Zz4%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+
+    <!-- PWA: Meta tags iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Gastos Carro">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48Y2lyY2xlIGN4PSc1MCcgY3k9JzUwJyByPSc0NScgZmlsbD0nJTIzZTYzOTQ2Jy8+PHRleHQgeT0nLjc1ZW0nIGZvbnQtc2l6ZT0nNjAnIHg9JzUwJScgdGV4dC1hbmNob3I9J21pZGRsZSc%2B8J%2BWl%2FwvdGV4dD48L3N2Zz4=">
+
+    <style>
+        :root { --bg:#000; --card:#111; --primary:#e63946; --secondary:#f4a261; --text:#fff; --gold:#ffc107; --border:#333; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:12px; }
+        .container { max-width:800px; margin:0 auto; }
+        h1 { text-align:center; color:var(--primary); margin-bottom:5px; font-size:1.5em; }
+        .subtitle { text-align:center; color:var(--secondary); font-size:0.85em; margin-bottom:12px; }
+        .tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+        .tab { flex:1; padding:8px 6px; background:var(--card); border:2px solid transparent; color:var(--text); cursor:pointer; border-radius:8px; font-size:0.8em; text-align:center; transition:0.2s; }
+        .tab.active { border-color:var(--primary); background:var(--primary); color:white; font-weight:bold; }
+        .tab-content { display:none; } .tab-content.active { display:block; }
+        .card { background:var(--card); border-radius:12px; padding:15px; margin-bottom:12px; border:1px solid var(--border); }
+        .auth-section { max-width:350px; margin:40px auto; background:var(--card); padding:20px; border-radius:12px; border:1px solid var(--border); }
+        .auth-section input { width:100%; padding:10px; margin:6px 0; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; }
+        .auth-section button { width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:8px; }
+        .auth-section .toggle { background:none; color:var(--secondary); text-decoration:underline; margin-top:4px; }
+        .dashboard { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+        .dash-item { background:var(--card); padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border); }
+        .dash-item .number { font-size:1.6em; font-weight:bold; color:var(--gold); }
+        .dash-item .label { font-size:0.8em; color:var(--secondary); margin-top:4px; }
+        .resumo-section { margin-bottom:15px; }
+        .resumo-section h3 { color:var(--secondary); margin-bottom:8px; }
+        .resumo-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; }
+        .resumo-card { background:var(--bg); border-radius:10px; padding:10px; text-align:center; border:1px solid var(--border); }
+        .resumo-card .valor { font-size:1.2em; font-weight:bold; }
+        .resumo-card .periodo { font-size:0.7em; color:var(--secondary); }
+        .gasto .valor { color:var(--primary); }
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .form-group { margin-bottom:6px; } .form-group.full { grid-column:1/-1; }
+        .form-group label { display:block; font-size:0.75em; color:var(--secondary); margin-bottom:2px; }
+        .form-group input, .form-group select { width:100%; padding:7px 8px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:0.85em; }
+        .checkbox-group { display:flex; align-items:center; gap:6px; }
+        .checkbox-group input[type="checkbox"] { width:16px; height:16px; accent-color:var(--primary); }
+        .btn { padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.85em; transition:0.2s; margin:3px; }
+        .btn-primary { background:var(--primary); color:white; } .btn-primary:hover { opacity:0.9; }
+        .btn-secondary { background:var(--secondary); color:black; } .btn-secondary:hover { opacity:0.9; }
+        .btn-outline { background:transparent; border:1px solid var(--primary); color:var(--primary); }
+        .btn-small { padding:4px 10px; font-size:0.75em; }
+        .badge { display:inline-block; padding:2px 6px; border-radius:6px; font-size:0.7em; margin-left:4px; background:var(--primary); color:white; }
+        .total-geral { text-align:center; font-size:1em; color:var(--gold); margin-bottom:12px; }
+        .edit-form { background:var(--card); padding:12px; border-radius:8px; margin-top:8px; border:1px solid var(--border); }
+        .edit-form input, .edit-form select { width:100%; margin:4px 0; }
+        .categoria-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); }
+        .btn-delete-cat { background:none; border:none; color:#ef4444; font-size:18px; cursor:pointer; }
+        .add-cat-form { display:flex; gap:8px; margin-top:10px; }
+        .add-cat-form input { flex:1; }
+        .logout { float:right; background:none; border:1px solid var(--primary); color:var(--primary); padding:4px 12px; border-radius:6px; cursor:pointer; font-size:0.8em; }
+        .timeline { position: relative; padding-left: 30px; }
+        .timeline::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+        .timeline-item { position: relative; margin-bottom: 20px; }
+        .timeline-item::before { content: ''; position: absolute; left: -22px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--secondary); border: 2px solid var(--bg); }
+        .timeline-item.abastecimento::before { background: var(--primary); }
+        .timeline-item.despesa::before { background: var(--gold); }
+        .timeline-content { background: var(--card); border-radius: 8px; padding: 10px; border: 1px solid var(--border); }
+        .timeline-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+        .timeline-info strong { color: var(--secondary); display:block; }
+        .filtros-busca { margin-bottom: 15px; }
+        .periodo-btns { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+        .periodo-btns .btn { flex: 1; min-width: 70px; font-size: 0.7em; padding: 5px; }
+        .periodo-btns .btn.active { background: var(--primary); color: white; }
+        .datas-personalizadas { display: flex; gap: 8px; margin-top: 8px; }
+        .datas-personalizadas input { flex: 1; }
+        .chart-container { width: 100%; height: 300px; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="appContainer">
+        <div id="authScreen" class="auth-section">
+            <h2 style="color:var(--primary);text-align:center;">🚗 Controle de Gastos</h2>
+            <p style="text-align:center;color:var(--secondary);">Faça login para acessar seus dados</p>
+            <input type="email" id="email" placeholder="E-mail">
+            <input type="password" id="password" placeholder="Senha">
+            <button class="btn-primary" id="btnLogin">Entrar</button>
+            <button class="toggle" id="btnToggle">Criar uma conta</button>
+            <p id="authError" style="color:#e63946;text-align:center;display:none;"></p>
+        </div>
+
+        <div id="mainScreen" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>🚗 Controle de Gastos</h1>
+                <button class="logout" id="btnLogout">Sair</button>
+            </div>
+            <p class="subtitle">Controle de abastecimentos e despesas</p>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="historico">📋 Histórico</button>
+                <button class="tab" data-tab="dashboard">📊 Dashboard</button>
+                <button class="tab" data-tab="graficos">📈 Gráficos</button>
+                <button class="tab" data-tab="novo">➕ Novo</button>
+                <button class="tab" data-tab="lembretes">🔔 Lembretes</button>
+                <button class="tab" data-tab="categorias">⚙️ Categorias</button>
+                <button class="tab" data-tab="busca">🔍 Busca</button>
+            </div>
+
+            <div class="tab-content active" id="tab-historico">
+                <div class="card">
+                    <h2>📋 Linha do Tempo</h2>
+                    <div class="total-geral" id="totalGeral"></div>
+                    <div class="timeline" id="timelineContainer"></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-dashboard">
+                <div class="dashboard">
+                    <div class="dash-item"><div class="number" id="custoKm">R$ 0,00</div><div class="label">Custo por km</div></div>
+                    <div class="dash-item"><div class="number" id="consumoMedio">0,00 km/l</div><div class="label">Consumo médio</div></div>
+                    <div class="dash-item"><div class="number" id="autonomia">0 km</div><div class="label">Autonomia estimada</div></div>
+                </div>
+                <div class="resumo-section">
+                    <h3>🔴 Gastos</h3>
+                    <div class="resumo-grid">
+                        <div class="resumo-card gasto"><div class="valor" id="gastoDia">R$0</div><div class="periodo">Hoje</div></div>
+                        <div class="resumo-card gasto"><div class="valor" id="gastoSemana">R$0</div><div class="periodo">Semana</div></div>
+                        <div class="resumo-card gasto"><div class="valor" id="gastoMes">R$0</div><div class="periodo">Mês</div></div>
+                        <div class="resumo-card gasto"><div class="valor" id="gastoAno">R$0</div><div class="periodo">Ano</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-graficos">
+                <div class="card">
+                    <h2>📈 Evolução Mensal dos Gastos</h2>
+                    <div class="chart-container">
+                        <canvas id="graficoMensal"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-novo">
+                <div class="card">
+                    <h2>➕ Novo Registro</h2>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="tipoRegistro" onchange="atualizarFormulario()" style="background:var(--bg); color:var(--text); border:1px solid var(--border); padding:8px; border-radius:8px; width:100%;">
+                            <option value="abastecimento">⛽ Abastecimento</option>
+                            <option value="despesa">💸 Despesa</option>
+                        </select>
+                    </div>
+                    <div class="form-grid" id="formDinamico"></div>
+                    <button class="btn-primary btn-small" onclick="salvarRegistro()" style="margin-top:12px;">💾 Salvar</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-lembretes">
+                <div class="card">
+                    <h2>🔔 Próximo abastecimento</h2>
+                    <div id="lembretesConteudo"><p class="empty-state">Registre dois abastecimentos com tanque cheio para calcular a previsão.</p></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-categorias">
+                <div class="card">
+                    <h3 style="color:var(--secondary);">🔴 Categorias de Despesa</h3>
+                    <div id="listaCategoriasDespesa"></div>
+                    <div class="add-cat-form">
+                        <input type="text" id="novaCatDespesa" placeholder="Nova categoria de despesa">
+                        <button class="btn-primary btn-small" id="btnAddCatDespesa">➕</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-busca">
+                <div class="card">
+                    <h2>🔍 Busca</h2>
+                    <div class="filtros-busca">
+                        <div class="form-group">
+                            <label>Tipo de lançamento</label>
+                            <select id="buscaTipo" onchange="atualizarBusca()">
+                                <option value="todos">Todos</option>
+                                <option value="despesa">💸 Despesas</option>
+                                <option value="abastecimento">⛽ Abastecimentos</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="grupoCategoria" style="display:none;">
+                            <label>Categoria de despesa</label>
+                            <select id="buscaCategoria" onchange="atualizarBusca()">
+                                <option value="todas">Todas</option>
+                            </select>
+                        </div>
+                        <label>Período</label>
+                        <div class="periodo-btns" id="periodoBotoes">
+                            <button class="btn btn-small active" data-periodo="semana">Esta semana</button>
+                            <button class="btn btn-small" data-periodo="hoje">Hoje</button>
+                            <button class="btn btn-small" data-periodo="mes">Este mês</button>
+                            <button class="btn btn-small" data-periodo="ano">Este ano</button>
+                            <button class="btn btn-small" data-periodo="7dias">Últ. 7 dias</button>
+                            <button class="btn btn-small" data-periodo="30dias">Últ. 30 dias</button>
+                            <button class="btn btn-small" data-periodo="personalizado">Personalizado</button>
+                        </div>
+                        <div class="datas-personalizadas" id="datasPersonalizadas" style="display:none;">
+                            <input type="date" id="dataInicioBusca" onchange="atualizarBusca()">
+                            <input type="date" id="dataFimBusca" onchange="atualizarBusca()">
+                        </div>
+                    </div>
+                </div>
+                <div class="resumo-section">
+                    <h3>Resultados</h3>
+                    <div class="resumo-grid">
+                        <div class="resumo-card gasto"><div class="valor" id="buscaGastos">R$0</div><div class="periodo">Gastos</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, push, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBP-7159WPs1q1lKRtW1c0BHjsLexZYQAM",
+            authDomain: "app-automotivo-b7788.firebaseapp.com",
+            databaseURL: "https://app-automotivo-b7788-default-rtdb.firebaseio.com",
+            projectId: "app-automotivo-b7788",
+            storageBucket: "app-automotivo-b7788.firebasestorage.app",
+            messagingSenderId: "762136290915",
+            appId: "1:762136290915:web:2694eb54769e683c4e3a56"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+        const VEICULO = 'Carro';
+        const CAPACIDADE_TANQUE = 50; // Capacidade do tanque do carro (em litros) – ajuste se necessário
+        let currentUser = null;
+        let categoriasDespesa = [];
+        let chartMensal = null;
+
+        const authScreen = document.getElementById('authScreen');
+        const mainScreen = document.getElementById('mainScreen');
+        const authError = document.getElementById('authError');
+
+        // ========== AUTENTICAÇÃO ==========
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                authScreen.style.display = 'none';
+                mainScreen.style.display = 'block';
+                iniciarApp();
+            } else {
+                authScreen.style.display = 'block';
+                mainScreen.style.display = 'none';
+            }
+        });
+
+        document.getElementById('btnLogin').addEventListener('click', async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const isSignUp = document.getElementById('btnToggle').dataset.signup === 'true';
+            try {
+                if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
+                else await signInWithEmailAndPassword(auth, email, password);
+                authError.style.display = 'none';
+            } catch (error) {
+                authError.textContent = error.message;
+                authError.style.display = 'block';
+            }
+        });
+
+        document.getElementById('btnToggle').addEventListener('click', function() {
+            const isSignUp = this.dataset.signup === 'true';
+            this.dataset.signup = !isSignUp;
+            this.textContent = isSignUp ? 'Criar uma conta' : 'Já tenho conta';
+            document.getElementById('btnLogin').textContent = isSignUp ? 'Entrar' : 'Cadastrar';
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => signOut(auth));
+
+        async function iniciarApp() {
+            await carregarCategorias();
+            renderHistorico();
+            configurarAbas();
+        }
+
+        function configurarAbas() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`tab-${tabName}`).classList.add('active');
+                    if (tabName === 'dashboard') carregarDashboard();
+                    else if (tabName === 'historico') renderHistorico();
+                    else if (tabName === 'lembretes') gerarLembretes();
+                    else if (tabName === 'categorias') renderizarListaCategorias();
+                    else if (tabName === 'novo') atualizarFormulario();
+                    else if (tabName === 'busca') prepararBusca();
+                    else if (tabName === 'graficos') carregarGraficoMensal();
+                });
+            });
+        }
+
+        // ========== CATEGORIAS ==========
+        async function carregarCategorias() {
+            const snapDesp = await get(ref(db, 'categoriasDespesas'));
+            if (snapDesp.exists()) categoriasDespesa = Object.values(snapDesp.val());
+            else {
+                categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro','Combustível'];
+                await set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+            }
+            categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            renderizarListaCategorias();
+        }
+
+        function salvarCategoriasDespesa() {
+            categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+        }
+
+        function renderizarListaCategorias() {
+            const listaDesp = document.getElementById('listaCategoriasDespesa');
+            if (!listaDesp) return;
+            listaDesp.innerHTML = categoriasDespesa.map(cat => `
+                <div class="categoria-item"><span>${cat}</span><button class="btn-delete-cat" data-categoria="${cat}" data-tipo="despesa">❌</button></div>
+            `).join('');
+
+            document.querySelectorAll('.btn-delete-cat').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const cat = btn.dataset.categoria;
+                    categoriasDespesa = categoriasDespesa.filter(c => c !== cat);
+                    salvarCategoriasDespesa();
+                    renderizarListaCategorias();
+                });
+            });
+        }
+
+        document.getElementById('btnAddCatDespesa').addEventListener('click', () => {
+            const input = document.getElementById('novaCatDespesa');
+            const nova = input.value.trim();
+            if (nova && !categoriasDespesa.includes(nova)) {
+                categoriasDespesa.push(nova);
+                salvarCategoriasDespesa();
+                renderizarListaCategorias();
+                input.value = '';
+                if (document.getElementById('tab-novo').classList.contains('active')) atualizarFormulario();
+            }
+        });
+
+        document.getElementById('novaCatDespesa').addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('btnAddCatDespesa').click(); });
+
+        // ========== FORMULÁRIO ==========
+        window.atualizarFormulario = function() {
+            const tipo = document.getElementById('tipoRegistro').value;
+            const container = document.getElementById('formDinamico');
+            let html = '';
+            if (tipo === 'abastecimento') {
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_abast" required></div><div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div><div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" required oninput="calcularLitros()"></div><div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" required oninput="calcularLitros()"></div><div class="form-group"><label>Litros (automático)</label><input type="number" step="0.01" id="litros" readonly></div><div class="form-group"><label>Posto</label><input type="text" id="posto"></div><div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>`;
+            } else if (tipo === 'despesa') {
+                const opts = categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_desp" required></div><div class="form-group"><label>Km</label><input type="number" id="km_desp" required></div><div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div><div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div><div class="form-group"><label>Categoria</label><select id="categoriaSelect" onchange="toggleCategoriaOutro()">${opts}</select><input type="text" id="categoriaOutro" placeholder="Digite a categoria" style="display:none; margin-top:4px;"></div>`;
+            }
+            container.innerHTML = html;
+            const agora = new Date();
+            const offset = agora.getTimezoneOffset();
+            const local = new Date(agora.getTime() - offset * 60000);
+            const valorData = local.toISOString().slice(0,16);
+            const dateInput = document.querySelector('#formDinamico input[type="datetime-local"]');
+            if (dateInput) dateInput.value = valorData;
+            if (tipo === 'despesa') toggleCategoriaOutro();
+        };
+
+        window.calcularLitros = function() {
+            const preco = parseFloat(document.getElementById('precoLitro')?.value);
+            const valor = parseFloat(document.getElementById('valorAbast')?.value);
+            const litrosInput = document.getElementById('litros');
+            if (litrosInput && preco > 0 && valor > 0) litrosInput.value = (valor / preco).toFixed(2);
+        };
+        window.toggleCategoriaOutro = function() {
+            const sel = document.getElementById('categoriaSelect');
+            const outro = document.getElementById('categoriaOutro');
+            if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
+        };
+
+        // ========== SALVAR ==========
+        window.salvarRegistro = async function() {
+            if (!currentUser) return alert('Faça login primeiro.');
+            const tipo = document.getElementById('tipoRegistro').value;
+            let dados = { uid: currentUser.uid, veiculo: VEICULO };
+            try {
+                if (tipo === 'abastecimento') {
+                    const precoLitro = document.getElementById('precoLitro');
+                    const valorTotal = document.getElementById('valorAbast');
+                    const litros = document.getElementById('litros');
+                    if (!precoLitro || !valorTotal || !litros) throw new Error('Campos do abastecimento não encontrados.');
+                    dados = { ...dados, data: document.getElementById('data_abast').value, km: Number(document.getElementById('km_abast').value), litros: Number(litros.value), valor_total: Number(valorTotal.value), preco_litro: Number(precoLitro.value), posto: document.getElementById('posto').value, tanque_cheio: document.getElementById('tanqueCheio').checked };
+                } else if (tipo === 'despesa') {
+                    const catSelect = document.getElementById('categoriaSelect');
+                    const catOutro = document.getElementById('categoriaOutro');
+                    const categoria = catSelect.value === 'Outro' ? catOutro.value : catSelect.value;
+                    dados = { ...dados, data: document.getElementById('data_desp').value, km: Number(document.getElementById('km_desp').value), valor: Number(document.getElementById('valorDesp').value), descricao: document.getElementById('descricao').value, categoria: categoria };
+                }
+                const colecao = tipo === 'abastecimento' ? 'abastecimentos' : 'despesas';
+                await set(push(ref(db, colecao)), dados);
+                alert('✅ Registro salvo!');
+                atualizarFormulario();
+                if (document.getElementById('tab-historico').classList.contains('active')) renderHistorico();
+                if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+            } catch (error) {
+                alert('❌ Erro ao salvar: ' + error.message);
+            }
+        };
+
+        // ========== HISTÓRICO (TIMELINE) ==========
+        window.renderHistorico = async function() {
+            if (!currentUser) return;
+            const container = document.getElementById('timelineContainer');
+            const totalDiv = document.getElementById('totalGeral');
+            container.innerHTML = '<p class="empty-state">Carregando...</p>';
+            const colecoes = ['abastecimentos', 'despesas'];
+            let registros = [];
+            for (const col of colecoes) {
+                const snap = await get(ref(db, col));
+                if (snap.exists()) {
+                    snap.forEach(child => {
+                        const dados = child.val();
+                        if (dados.uid !== currentUser.uid) return;
+                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        registros.push({ id: child.key, tipoRegistro: col.slice(0,-1), ...dados });
+                    });
+                }
+            }
+            registros.sort((a, b) => (a.data < b.data) ? 1 : -1);
+            let totalGeral = 0;
+            registros.forEach(r => { totalGeral += r.tipoRegistro === 'abastecimento' ? Number(r.valor_total) : Number(r.valor || 0); });
+            totalDiv.textContent = registros.length ? `Total geral: R$ ${totalGeral.toFixed(2)} (${registros.length} registros)` : '';
+            if (!registros.length) { container.innerHTML = '<p class="empty-state">Nenhum registro ainda.</p>'; return; }
+            let html = '';
+            registros.forEach(r => {
+                const classe = r.tipoRegistro;
+                const dataFmt = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
+                html += `<div class="timeline-item ${classe}" id="item-${r.id}">
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <div class="timeline-info">
+                                <strong>${r.tipoRegistro === 'abastecimento' ? '⛽ Abastecimento' : '💸 Despesa'}</strong>
+                                <span>📅 ${dataFmt} - Km: ${r.km}</span>
+                            </div>
+                            <div>
+                                <button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipoRegistro}', '${r.id}')">✏️</button>
+                                <button class="btn-outline btn-small" onclick="excluirRegistro('${r.tipoRegistro}', '${r.id}')">🗑️</button>
+                            </div>
+                        </div>
+                        <div style="margin-top:4px;">`;
+                if (r.tipoRegistro === 'abastecimento') {
+                    html += `🔹 ${r.litros}L - R$ ${Number(r.valor_total).toFixed(2)} - Posto: ${r.posto || '-'}`;
+                    if (r.tanque_cheio) html += ' <span class="badge">Tanque cheio</span>';
+                } else {
+                    html += `🔹 ${r.descricao} - R$ ${Number(r.valor).toFixed(2)}`;
+                    if (r.categoria) html += ` (${r.categoria})`;
+                }
+                html += `</div><div id="edit-${r.id}" class="edit-form" style="display:none;"></div></div></div>`;
+            });
+            container.innerHTML = html;
+        };
+
+        // ========== EDITAR / EXCLUIR ==========
+        window.editarRegistro = async function(tipo, id) {
+            const editDiv = document.getElementById(`edit-${id}`);
+            if (editDiv.style.display === 'block') { editDiv.style.display = 'none'; return; }
+            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : 'despesas';
+            const snap = await get(ref(db, `${colecao}/${id}`));
+            if (!snap.exists()) return;
+            const dados = snap.val();
+            if (dados.uid !== currentUser.uid) { alert('Acesso negado.'); return; }
+            let formHtml = '';
+            if (tipo === 'abastecimento') {
+                formHtml = `<input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}"><input type="number" id="edit-km-${id}" value="${dados.km}"><input type="number" step="0.001" id="edit-preco-${id}" value="${dados.preco_litro}"><input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor_total}"><input type="number" step="0.01" id="edit-litros-${id}" value="${dados.litros}"><input type="text" id="edit-posto-${id}" value="${dados.posto || ''}"><label><input type="checkbox" id="edit-tanque-${id}" ${dados.tanque_cheio?'checked':''}> Tanque cheio?</label>`;
+            } else {
+                const selectedCat = categoriasDespesa.includes(dados.categoria) ? dados.categoria : 'Outro';
+                const outroValue = selectedCat === 'Outro' ? dados.categoria || '' : '';
+                formHtml = `<input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}"><input type="number" id="edit-km-${id}" value="${dados.km}"><input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}"><input type="text" id="edit-descricao-${id}" value="${dados.descricao || ''}"><select id="edit-categoria-${id}" onchange="toggleEditOutro('${id}')">${categoriasDespesa.map(c => `<option value="${c}" ${c===selectedCat?'selected':''}>${c}</option>`).join('')}<option value="Outro" ${selectedCat==='Outro'?'selected':''}>✏️ Outro</option></select><input type="text" id="edit-categoria-outro-${id}" value="${outroValue}" style="display:${selectedCat==='Outro'?'block':'none'}; margin-top:4px;">`;
+            }
+            formHtml += `<br><button class="btn-primary btn-small" onclick="salvarEdicao('${tipo}', '${id}')">💾 Salvar</button>`;
+            editDiv.innerHTML = formHtml;
+            editDiv.style.display = 'block';
+        };
+
+        window.toggleEditOutro = function(id) {
+            const sel = document.getElementById(`edit-categoria-${id}`);
+            const outro = document.getElementById(`edit-categoria-outro-${id}`);
+            if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
+        };
+
+        window.salvarEdicao = async function(tipo, id) {
+            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : 'despesas';
+            const at = {};
+            if (tipo === 'abastecimento') {
+                at['data'] = document.getElementById(`edit-data-${id}`).value;
+                at['km'] = Number(document.getElementById(`edit-km-${id}`).value);
+                at['preco_litro'] = Number(document.getElementById(`edit-preco-${id}`).value);
+                at['valor_total'] = Number(document.getElementById(`edit-valor-${id}`).value);
+                at['litros'] = Number(document.getElementById(`edit-litros-${id}`).value);
+                at['posto'] = document.getElementById(`edit-posto-${id}`).value;
+                at['tanque_cheio'] = document.getElementById(`edit-tanque-${id}`).checked;
+            } else {
+                at['data'] = document.getElementById(`edit-data-${id}`).value;
+                at['km'] = Number(document.getElementById(`edit-km-${id}`).value);
+                at['valor'] = Number(document.getElementById(`edit-valor-${id}`).value);
+                at['descricao'] = document.getElementById(`edit-descricao-${id}`).value;
+                const catSel = document.getElementById(`edit-categoria-${id}`);
+                const catOut = document.getElementById(`edit-categoria-outro-${id}`);
+                at['categoria'] = catSel.value === 'Outro' ? catOut.value : catSel.value;
+            }
+            await update(ref(db, `${colecao}/${id}`), at);
+            alert('✅ Alterações salvas!');
+            renderHistorico();
+            if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+        };
+
+        window.excluirRegistro = async function(tipo, id) {
+            if (!confirm('Excluir?')) return;
+            const colecao = tipo === 'abastecimento' ? 'abastecimentos' : 'despesas';
+            const snap = await get(ref(db, `${colecao}/${id}`));
+            if (snap.exists() && snap.val().uid !== currentUser.uid) { alert('Acesso negado.'); return; }
+            await remove(ref(db, `${colecao}/${id}`));
+            alert('🗑️ Excluído.');
+            renderHistorico();
+            if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
+        };
+
+        // ========== DASHBOARD ==========
+        async function carregarDashboard() {
+            if (!currentUser) return;
+            const [abastSnap, despSnap] = await Promise.all([
+                get(ref(db, 'abastecimentos')),
+                get(ref(db, 'despesas'))
+            ]);
+            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
+            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
+
+            const totalDespesas = despesas.reduce((s,d) => s + Number(d.valor), 0) + abastecimentos.reduce((s,a) => s + Number(a.valor_total), 0);
+            const todosGastos = [...abastecimentos, ...despesas];
+            const kms = todosGastos.map(r => r.km).filter(km => !isNaN(km));
+            const custoKm = kms.length >= 2 ? (totalDespesas / (Math.max(...kms) - Math.min(...kms))) : 0;
+            document.getElementById('custoKm').textContent = `R$ ${custoKm.toFixed(2)}`;
+
+            let consumoMedio = 0;
+            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
+            if (tanquesCheios.length >= 2) {
+                tanquesCheios.sort((a,b) => new Date(a.data) - new Date(b.data));
+                const ultimo = tanquesCheios[tanquesCheios.length-1];
+                const penultimo = tanquesCheios[tanquesCheios.length-2];
+                const kmPercorridos = ultimo.km - penultimo.km;
+                if (kmPercorridos > 0) {
+                    const entre = abastecimentos.filter(a => new Date(a.data) > new Date(penultimo.data) && new Date(a.data) <= new Date(ultimo.data));
+                    const totalLitros = entre.reduce((s,a) => s + a.litros, 0);
+                    consumoMedio = totalLitros > 0 ? kmPercorridos / totalLitros : 0;
+                }
+            }
+            document.getElementById('consumoMedio').textContent = `${consumoMedio.toFixed(2)} km/l`;
+
+            let autonomia = 0;
+            if (consumoMedio > 0 && abastecimentos.length > 0) {
+                const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+                autonomia = Math.round(consumoMedio * ultimoAbast.litros);
+            } else if (abastecimentos.length > 0) {
+                const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+                autonomia = Math.round((ultimoAbast.litros / CAPACIDADE_TANQUE) * CAPACIDADE_TANQUE);
+            }
+            document.getElementById('autonomia').textContent = `${autonomia} km`;
+
+            function getPeriodos(dataStr) {
+                const agora = new Date();
+                const data = new Date(dataStr);
+                const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+                const dataSemHora = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+                const dia = dataSemHora.getTime() === hoje.getTime();
+                const diaSemana = agora.getDay();
+                const inicioSemana = new Date(hoje);
+                inicioSemana.setDate(hoje.getDate() - ((diaSemana + 6) % 7));
+                const fimSemana = new Date(inicioSemana);
+                fimSemana.setDate(inicioSemana.getDate() + 6);
+                const semana = dataSemHora >= inicioSemana && dataSemHora <= fimSemana;
+                const mes = data.getMonth() === agora.getMonth() && data.getFullYear() === agora.getFullYear();
+                const ano = data.getFullYear() === agora.getFullYear();
+                return { dia, semana, mes, ano };
+            }
+            function calcularTotais(regs) {
+                const t = { dia:0, semana:0, mes:0, ano:0 };
+                regs.forEach(r => {
+                    if (!r.data) return;
+                    const p = getPeriodos(r.data);
+                    const v = r.valor || r.valor_total || 0;
+                    if (p.dia) t.dia += Number(v);
+                    if (p.semana) t.semana += Number(v);
+                    if (p.mes) t.mes += Number(v);
+                    if (p.ano) t.ano += Number(v);
+                });
+                return t;
+            }
+            const gastos = calcularTotais([...abastecimentos, ...despesas]);
+
+            document.getElementById('gastoDia').textContent = `R$ ${gastos.dia.toFixed(2)}`;
+            document.getElementById('gastoSemana').textContent = `R$ ${gastos.semana.toFixed(2)}`;
+            document.getElementById('gastoMes').textContent = `R$ ${gastos.mes.toFixed(2)}`;
+            document.getElementById('gastoAno').textContent = `R$ ${gastos.ano.toFixed(2)}`;
+        }
+
+        // ========== LEMBRETES ==========
+        async function gerarLembretes() {
+            if (!currentUser) return;
+            const div = document.getElementById('lembretesConteudo');
+            const snap = await get(ref(db, 'abastecimentos'));
+            const abastecimentos = [];
+            if (snap.exists()) {
+                snap.forEach(d => {
+                    const v = d.val();
+                    if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v);
+                });
+            }
+            if (abastecimentos.length === 0) {
+                div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
+                return;
+            }
+            abastecimentos.sort((a, b) => new Date(b.data) - new Date(a.data));
+            const ultimoAbast = abastecimentos[0];
+            let html = `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
+
+            const tanques = abastecimentos.filter(a => a.tanque_cheio);
+            if (tanques.length >= 2) {
+                tanques.sort((a, b) => new Date(a.data) - new Date(b.data));
+                const ultimoTanque = tanques[tanques.length - 1];
+                const penultimoTanque = tanques[tanques.length - 2];
+                const kmPerc = ultimoTanque.km - penultimoTanque.km;
+                if (kmPerc > 0) {
+                    const entre = abastecimentos.filter(a => {
+                        const d = new Date(a.data);
+                        return d > new Date(penultimoTanque.data) && d <= new Date(ultimoTanque.data);
+                    });
+                    const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
+                    const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
+                    if (consumo > 0) {
+                        const previsao = Math.round(consumo * ultimoAbast.litros);
+                        html += `
+                            <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
+                            <p>🔔 Próximo abastecimento: <strong>${ultimoAbast.km + previsao} km</strong> (baseado em ${ultimoAbast.litros}L)</p>
+                        `;
+                    }
+                }
+            } else {
+                html += '<p class="empty-state">Registre dois tanques cheios para calcular o consumo médio.</p>';
+            }
+            div.innerHTML = html;
+        }
+
+        // ========== BUSCA ==========
+        async function atualizarBusca() {
+            if (!currentUser) return;
+            const tipo = document.getElementById('buscaTipo').value;
+            const categoria = document.getElementById('buscaCategoria')?.value || 'todas';
+            const periodoBtn = document.querySelector('#periodoBotoes .btn.active')?.dataset?.periodo || 'semana';
+            const dataInicioInput = document.getElementById('dataInicioBusca').value;
+            const dataFimInput = document.getElementById('dataFimBusca').value;
+
+            document.getElementById('grupoCategoria').style.display = (tipo === 'todos' || tipo === 'despesa') ? 'block' : 'none';
+            document.getElementById('datasPersonalizadas').style.display = periodoBtn === 'personalizado' ? 'flex' : 'none';
+
+            let dataInicio, dataFim;
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+            const amanha = new Date(hoje);
+            amanha.setDate(hoje.getDate() + 1);
+
+            if (periodoBtn === 'personalizado') {
+                if (dataInicioInput) dataInicio = new Date(dataInicioInput);
+                if (dataFimInput) dataFim = new Date(dataFimInput);
+                if (dataFim) dataFim.setDate(dataFim.getDate() + 1);
+            } else {
+                switch(periodoBtn) {
+                    case 'hoje': dataInicio = new Date(hoje); dataFim = new Date(amanha); break;
+                    case 'semana':
+                        const diaSemana = hoje.getDay() === 0 ? 7 : hoje.getDay();
+                        dataInicio = new Date(hoje);
+                        dataInicio.setDate(hoje.getDate() - diaSemana + 1);
+                        dataFim = new Date(dataInicio);
+                        dataFim.setDate(dataInicio.getDate() + 7);
+                        break;
+                    case 'mes': dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1); dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1); break;
+                    case 'ano': dataInicio = new Date(hoje.getFullYear(), 0, 1); dataFim = new Date(hoje.getFullYear() + 1, 0, 1); break;
+                    case '7dias': dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate() - 6); dataFim = new Date(amanha); break;
+                    case '30dias': dataInicio = new Date(hoje); dataInicio.setDate(hoje.getDate() - 29); dataFim = new Date(amanha); break;
+                    default: dataInicio = new Date(hoje); dataFim = new Date(amanha);
+                }
+            }
+
+            let colecoes;
+            if (tipo === 'todos') colecoes = ['despesas', 'abastecimentos'];
+            else if (tipo === 'despesa') colecoes = categoria === 'todas' ? ['despesas', 'abastecimentos'] : ['despesas'];
+            else if (tipo === 'abastecimento') colecoes = ['abastecimentos'];
+
+            let gastos = 0;
+            for (const col of colecoes) {
+                const snap = await get(ref(db, col));
+                if (snap.exists()) {
+                    snap.forEach(child => {
+                        const dados = child.val();
+                        if (dados.uid !== currentUser.uid) return;
+                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        const dataReg = new Date(dados.data);
+                        if (dataInicio && dataReg < dataInicio) return;
+                        if (dataFim && dataReg >= dataFim) return;
+
+                        if (col === 'despesas') {
+                            if (categoria !== 'todas' && dados.categoria !== categoria) return;
+                            gastos += Number(dados.valor);
+                        } else if (col === 'abastecimentos') {
+                            gastos += Number(dados.valor_total);
+                        }
+                    });
+                }
+            }
+            document.getElementById('buscaGastos').textContent = `R$ ${gastos.toFixed(2)}`;
+        }
+
+        function prepararBusca() {
+            const selCat = document.getElementById('buscaCategoria');
+            selCat.innerHTML = '<option value="todas">Todas</option>' + categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('');
+            atualizarBusca();
+        }
+
+        document.querySelectorAll('#periodoBotoes .btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('#periodoBotoes .btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                atualizarBusca();
+            });
+        });
+
+        // ========== GRÁFICO MENSAL ==========
+        async function carregarGraficoMensal() {
+            if (!currentUser) return;
+            const [abastSnap, despSnap] = await Promise.all([
+                get(ref(db, 'abastecimentos')),
+                get(ref(db, 'despesas'))
+            ]);
+            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
+            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
+
+            const meses = {};
+            const todos = [...abastecimentos.map(a => ({ ...a, valor: a.valor_total, tipoValor: 'gasto' })), ...despesas.map(d => ({ ...d, tipoValor: 'gasto' }))];
+            todos.forEach(item => {
+                if (!item.data) return;
+                const d = new Date(item.data);
+                const chave = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!meses[chave]) meses[chave] = { gastos: 0 };
+                meses[chave].gastos += Number(item.valor || 0);
+            });
+
+            const chavesOrdenadas = Object.keys(meses).sort();
+            const labels = chavesOrdenadas.map(ch => {
+                const [ano, mes] = ch.split('-');
+                return `${mes}/${ano}`;
+            });
+            const dadosGastos = chavesOrdenadas.map(ch => meses[ch].gastos);
+
+            const ctx = document.getElementById('graficoMensal').getContext('2d');
+            if (chartMensal) chartMensal.destroy();
+            chartMensal = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Gastos',
+                            data: dadosGastos,
+                            borderColor: '#e63946',
+                            backgroundColor: 'rgba(230, 57, 70, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#ffffff' } },
+                        x: { ticks: { color: '#ffffff' } }
+                    },
+                    plugins: { legend: { labels: { color: '#ffffff' } } }
+                }
+            });
+        }
+    </script>
+
+    <!-- ========== PWA: SERVICE WORKER ========== -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => self.clients.claim()); self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));`;
+                const blob = new Blob([swCode], {type: 'application/javascript'});
+                navigator.serviceWorker.register(URL.createObjectURL(blob));
+            });
+        }
+    </script>
+</body>
+</html>
