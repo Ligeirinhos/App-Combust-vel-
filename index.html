@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Gastos Moto">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48Y2lyY2xlIGN4PSc1MCcgY3k9JzUwJyByPSc0NScgZmlsbD0nJTIzZTYzOTQ2Jy8+PHRleHQgeT0nLjc1ZW0nIGZvbnQtc2l6ZT0nNjAnIHg9JzUwJScgdGV4dC1hbmNob3I9J21pZGRsZSc+8J+NhjwvdGV4dD48L3N2Zz4=">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48Y2lyY2xlIGN4PSc1MCcgY3k9JzUwJyByPSc0NScgZmlsbD0nJTIzZTYzOTQ2Jy8+PHRleHQgeT0nLjc1ZW0nIGZvbnQtc2l6ZT0nNjAnIHg9JzUwJScgdGV4dC1hbmNob3I9J21pZGRsZSc%2B8J%2BNhjwvdGV4dD48L3N2Zz4=">
 
     <style>
         :root { --bg:#000; --card:#111; --primary:#e63946; --secondary:#f4a261; --text:#fff; --gold:#ffc107; --border:#333; }
@@ -80,6 +80,10 @@
         .datas-personalizadas { display: flex; gap: 8px; margin-top: 8px; }
         .datas-personalizadas input { flex: 1; }
         .chart-container { width: 100%; height: 300px; margin-top: 12px; }
+        .checkbox-incluir-carro { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+        .checkbox-incluir-carro input { width: 18px; height: 18px; accent-color: var(--primary); }
+        .info-media-despesa { background: var(--bg); border-radius: 8px; padding: 8px; margin-top: 4px; font-size: 0.8em; border: 1px solid var(--border); }
+        .veiculo-info { font-size: 0.8em; opacity: 0.8; margin-left: 4px; }
     </style>
 </head>
 <body>
@@ -114,12 +118,26 @@
             <div class="tab-content active" id="tab-historico">
                 <div class="card">
                     <h2>📋 Linha do Tempo</h2>
+                    <!-- Seletor de veículo -->
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>Filtrar por veículo</label>
+                        <select id="filtroVeiculoTimeline" onchange="renderHistorico()" style="background:var(--bg); color:var(--text); border:1px solid var(--border); padding:8px; border-radius:8px; width:100%;">
+                            <option value="ambos">Ambos (Moto + Carro)</option>
+                            <option value="Moto" selected>🏍️ Moto</option>
+                            <option value="Carro">🚗 Carro</option>
+                        </select>
+                    </div>
                     <div class="total-geral" id="totalGeral"></div>
                     <div class="timeline" id="timelineContainer"></div>
                 </div>
             </div>
 
             <div class="tab-content" id="tab-dashboard">
+                <!-- Checkbox para incluir carro -->
+                <div class="checkbox-incluir-carro">
+                    <input type="checkbox" id="incluirCarroDashboard" onchange="carregarDashboard()">
+                    <label for="incluirCarroDashboard">Incluir gastos do carro</label>
+                </div>
                 <div class="dashboard">
                     <div class="dash-item"><div class="number" id="saldoAtual">R$ 0,00</div><div class="label">Saldo (Receita - Gastos)</div></div>
                     <div class="dash-item"><div class="number" id="custoKm">R$ 0,00</div><div class="label">Custo por km</div></div>
@@ -209,6 +227,10 @@
             <div class="tab-content" id="tab-busca">
                 <div class="card">
                     <h2>🔍 Busca</h2>
+                    <div class="checkbox-incluir-carro">
+                        <input type="checkbox" id="incluirCarroBusca" onchange="atualizarBusca()">
+                        <label for="incluirCarroBusca">Incluir gastos do carro</label>
+                    </div>
                     <div class="filtros-busca">
                         <div class="form-group">
                             <label>Tipo de lançamento</label>
@@ -278,12 +300,14 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
-        const VEICULO = 'Moto';
+        const VEICULO_MOTO = 'Moto';
+        const VEICULO_CARRO = 'Carro';
         const CAPACIDADE_TANQUE = 12;
         let currentUser = null;
         let categoriasDespesa = [];
         let categoriasReceita = [];
         let chartMensal = null;
+        let incluirCarro = false;
 
         const authScreen = document.getElementById('authScreen');
         const mainScreen = document.getElementById('mainScreen');
@@ -432,7 +456,7 @@
                 html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_abast" required></div><div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div><div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" required oninput="calcularLitros()"></div><div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" required oninput="calcularLitros()"></div><div class="form-group"><label>Litros (automático)</label><input type="number" step="0.01" id="litros" readonly></div><div class="form-group"><label>Posto</label><input type="text" id="posto"></div><div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>`;
             } else if (tipo === 'despesa') {
                 const opts = categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
-                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_desp" required></div><div class="form-group"><label>Km</label><input type="number" id="km_desp" required></div><div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div><div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div><div class="form-group"><label>Categoria</label><select id="categoriaSelect" onchange="toggleCategoriaOutro()">${opts}</select><input type="text" id="categoriaOutro" placeholder="Digite a categoria" style="display:none; margin-top:4px;"></div>`;
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_desp" required></div><div class="form-group"><label>Km</label><input type="number" id="km_desp" required oninput="atualizarInfoMediaDespesa()"></div><div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div><div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div><div class="form-group"><label>Categoria</label><select id="categoriaSelect" onchange="toggleCategoriaOutro(); atualizarInfoMediaDespesa()">${opts}</select><input type="text" id="categoriaOutro" placeholder="Digite a categoria" style="display:none; margin-top:4px;"></div><div class="info-media-despesa" id="infoMediaDespesa"></div>`;
             } else if (tipo === 'receita') {
                 const opts = categoriasReceita.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
                 html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_rec" required></div><div class="form-group"><label>Km</label><input type="number" id="km_rec" required></div><div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorRec" required></div><div class="form-group"><label>🏢 Estabelecimento</label><select id="tipoReceitaSelect" onchange="toggleTipoOutro()">${opts}</select><input type="text" id="tipoReceitaOutro" placeholder="Digite o nome" style="display:none; margin-top:4px;"></div>`;
@@ -465,11 +489,54 @@
             if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
         };
 
+        // ========== INFORMAÇÃO DE MÉDIA DE KM PARA DESPESAS ==========
+        window.atualizarInfoMediaDespesa = async function() {
+            const infoDiv = document.getElementById('infoMediaDespesa');
+            if (!infoDiv || !currentUser) return;
+            const categoria = document.getElementById('categoriaSelect')?.value || '';
+            const kmAtual = Number(document.getElementById('km_desp')?.value || 0);
+            if (!categoria || categoria === 'Outro' || !kmAtual) {
+                infoDiv.innerHTML = '';
+                return;
+            }
+            const snap = await get(ref(db, 'despesas'));
+            const despesasCategoria = [];
+            if (snap.exists()) {
+                snap.forEach(child => {
+                    const d = child.val();
+                    if (d.uid === currentUser.uid && d.veiculo === VEICULO_MOTO && d.categoria === categoria) {
+                        despesasCategoria.push(d);
+                    }
+                });
+            }
+            if (despesasCategoria.length === 0) {
+                infoDiv.innerHTML = '<span>📊 Nenhuma despesa anterior dessa categoria para a moto.</span>';
+                return;
+            }
+            despesasCategoria.sort((a, b) => new Date(a.data) - new Date(b.data));
+            const ultima = despesasCategoria[despesasCategoria.length - 1];
+            const kmRodados = kmAtual - ultima.km;
+            let mediaKm = '--';
+            if (despesasCategoria.length >= 2) {
+                const primeira = despesasCategoria[0];
+                const kmTotal = despesasCategoria[despesasCategoria.length - 1].km - primeira.km;
+                const intervalo = despesasCategoria.length - 1;
+                mediaKm = (kmTotal / intervalo).toFixed(0);
+            } else {
+                mediaKm = 'Primeira troca, sem média';
+            }
+            infoDiv.innerHTML = `
+                <p>📅 Última: ${new Date(ultima.data).toLocaleDateString('pt-BR')} (${ultima.km} km)</p>
+                <p>🛣️ Km rodados desde a última: <strong>${kmRodados} km</strong></p>
+                <p>📏 Média de km entre todas: <strong>${mediaKm}</strong></p>
+            `;
+        };
+
         // ========== SALVAR ==========
         window.salvarRegistro = async function() {
             if (!currentUser) return alert('Faça login primeiro.');
             const tipo = document.getElementById('tipoRegistro').value;
-            let dados = { uid: currentUser.uid, veiculo: VEICULO };
+            let dados = { uid: currentUser.uid, veiculo: VEICULO_MOTO };
             try {
                 if (tipo === 'abastecimento') {
                     const precoLitro = document.getElementById('precoLitro');
@@ -499,9 +566,10 @@
             }
         };
 
-        // ========== HISTÓRICO (TIMELINE) ==========
+        // ========== HISTÓRICO (TIMELINE COM SELETOR DE VEÍCULO) ==========
         window.renderHistorico = async function() {
             if (!currentUser) return;
+            const filtroVeiculo = document.getElementById('filtroVeiculoTimeline')?.value || 'ambos';
             const container = document.getElementById('timelineContainer');
             const totalDiv = document.getElementById('totalGeral');
             container.innerHTML = '<p class="empty-state">Carregando...</p>';
@@ -513,7 +581,10 @@
                     snap.forEach(child => {
                         const dados = child.val();
                         if (dados.uid !== currentUser.uid) return;
-                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        // Filtro de veículo
+                        if (filtroVeiculo === 'Moto' && dados.veiculo !== VEICULO_MOTO) return;
+                        if (filtroVeiculo === 'Carro' && dados.veiculo !== VEICULO_CARRO) return;
+                        // Se for 'ambos', aceita tudo
                         registros.push({ id: child.key, tipoRegistro: col.slice(0,-1), ...dados });
                     });
                 }
@@ -527,12 +598,13 @@
             registros.forEach(r => {
                 const classe = r.tipoRegistro;
                 const dataFmt = r.data ? new Date(r.data).toLocaleString('pt-BR') : '';
+                const veiculoIcone = r.veiculo === VEICULO_CARRO ? '🚗' : '🏍️';
                 html += `<div class="timeline-item ${classe}" id="item-${r.id}">
                     <div class="timeline-content">
                         <div class="timeline-header">
                             <div class="timeline-info">
                                 <strong>${r.tipoRegistro === 'abastecimento' ? '⛽ Abastecimento' : r.tipoRegistro === 'despesa' ? '💸 Despesa' : '💰 Receita'}</strong>
-                                <span>📅 ${dataFmt} - Km: ${r.km}</span>
+                                <span>📅 ${dataFmt} - Km: ${r.km}</span> <span class="veiculo-info">${veiculoIcone} ${r.veiculo || VEICULO_MOTO}</span>
                             </div>
                             <div>
                                 <button class="btn-secondary btn-small" onclick="editarRegistro('${r.tipoRegistro}', '${r.id}')">✏️</button>
@@ -634,36 +706,51 @@
             if (document.getElementById('tab-dashboard').classList.contains('active')) carregarDashboard();
         };
 
-        // ========== DASHBOARD (COM AUTONOMIA CORRIGIDA) ==========
+        // ========== DASHBOARD (COM OPÇÃO DE INCLUIR CARRO) ==========
         async function carregarDashboard() {
             if (!currentUser) return;
+            incluirCarro = document.getElementById('incluirCarroDashboard')?.checked || false;
             const [abastSnap, despSnap, recSnap] = await Promise.all([
                 get(ref(db, 'abastecimentos')),
                 get(ref(db, 'despesas')),
                 get(ref(db, 'receitas'))
             ]);
-            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
-            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
-            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) receitas.push(v); });
+            const abastecimentos = []; 
+            if (abastSnap.exists()) abastSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && (v.veiculo === VEICULO_MOTO || (incluirCarro && v.veiculo === VEICULO_CARRO))) abastecimentos.push(v); 
+            });
+            const despesas = []; 
+            if (despSnap.exists()) despSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && (v.veiculo === VEICULO_MOTO || (incluirCarro && v.veiculo === VEICULO_CARRO))) despesas.push(v); 
+            });
+            const receitas = []; 
+            if (recSnap.exists()) recSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) receitas.push(v); 
+            });
 
             const totalReceitas = receitas.reduce((s,r) => s + Number(r.valor), 0);
             const totalDespesas = despesas.reduce((s,d) => s + Number(d.valor), 0) + abastecimentos.reduce((s,a) => s + Number(a.valor_total), 0);
             document.getElementById('saldoAtual').textContent = `R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
 
-            const todosGastos = [...abastecimentos, ...despesas];
-            const kms = todosGastos.map(r => r.km).filter(km => !isNaN(km));
-            const custoKm = kms.length >= 2 ? (totalDespesas / (Math.max(...kms) - Math.min(...kms))) : 0;
+            const abastMoto = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) abastMoto.push(v); });
+            const despMoto = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) despMoto.push(v); });
+            const todosGastosMoto = [...abastMoto, ...despMoto];
+            const kms = todosGastosMoto.map(r => r.km).filter(km => !isNaN(km));
+            const custoKm = kms.length >= 2 ? (despMoto.reduce((s,d) => s + Number(d.valor), 0) + abastMoto.reduce((s,a) => s + Number(a.valor_total), 0)) / (Math.max(...kms) - Math.min(...kms)) : 0;
             document.getElementById('custoKm').textContent = `R$ ${custoKm.toFixed(2)}`;
 
             let consumoMedio = 0;
-            const tanquesCheios = abastecimentos.filter(a => a.tanque_cheio);
+            const tanquesCheios = abastMoto.filter(a => a.tanque_cheio);
             if (tanquesCheios.length >= 2) {
                 tanquesCheios.sort((a,b) => new Date(a.data) - new Date(b.data));
                 const ultimo = tanquesCheios[tanquesCheios.length-1];
                 const penultimo = tanquesCheios[tanquesCheios.length-2];
                 const kmPercorridos = ultimo.km - penultimo.km;
                 if (kmPercorridos > 0) {
-                    const entre = abastecimentos.filter(a => new Date(a.data) > new Date(penultimo.data) && new Date(a.data) <= new Date(ultimo.data));
+                    const entre = abastMoto.filter(a => new Date(a.data) > new Date(penultimo.data) && new Date(a.data) <= new Date(ultimo.data));
                     const totalLitros = entre.reduce((s,a) => s + a.litros, 0);
                     consumoMedio = totalLitros > 0 ? kmPercorridos / totalLitros : 0;
                 }
@@ -671,11 +758,11 @@
             document.getElementById('consumoMedio').textContent = `${consumoMedio.toFixed(2)} km/l`;
 
             let autonomia = 0;
-            if (consumoMedio > 0 && abastecimentos.length > 0) {
-                const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+            if (consumoMedio > 0 && abastMoto.length > 0) {
+                const ultimoAbast = abastMoto.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
                 autonomia = Math.round(consumoMedio * ultimoAbast.litros);
-            } else if (abastecimentos.length > 0) {
-                const ultimoAbast = abastecimentos.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
+            } else if (abastMoto.length > 0) {
+                const ultimoAbast = abastMoto.reduce((a,b) => new Date(a.data) > new Date(b.data) ? a : b);
                 autonomia = Math.round((ultimoAbast.litros / CAPACIDADE_TANQUE) * CAPACIDADE_TANQUE);
             }
             document.getElementById('autonomia').textContent = `${autonomia} km`;
@@ -735,7 +822,7 @@
             if (snap.exists()) {
                 snap.forEach(d => {
                     const v = d.val();
-                    if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v);
+                    if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) abastecimentos.push(v);
                 });
             }
             if (abastecimentos.length === 0) {
@@ -773,9 +860,10 @@
             div.innerHTML = html;
         }
 
-        // ========== BUSCA ==========
+        // ========== BUSCA (COM OPÇÃO DE INCLUIR CARRO) ==========
         async function atualizarBusca() {
             if (!currentUser) return;
+            const incluirCarroBusca = document.getElementById('incluirCarroBusca')?.checked || false;
             const tipo = document.getElementById('buscaTipo').value;
             const estabelecimento = document.getElementById('buscaEstabelecimento')?.value || 'todos';
             const categoria = document.getElementById('buscaCategoria')?.value || 'todas';
@@ -828,7 +916,8 @@
                     snap.forEach(child => {
                         const dados = child.val();
                         if (dados.uid !== currentUser.uid) return;
-                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        const veiculoValido = dados.veiculo === VEICULO_MOTO || (incluirCarroBusca && dados.veiculo === VEICULO_CARRO);
+                        if (!veiculoValido) return;
                         const dataReg = new Date(dados.data);
                         if (dataInicio && dataReg < dataInicio) return;
                         if (dataFim && dataReg >= dataFim) return;
@@ -869,14 +958,27 @@
         // ========== GRÁFICO MENSAL ==========
         async function carregarGraficoMensal() {
             if (!currentUser) return;
+            incluirCarro = document.getElementById('incluirCarroDashboard')?.checked || incluirCarro || false;
             const [abastSnap, despSnap, recSnap] = await Promise.all([
                 get(ref(db, 'abastecimentos')),
                 get(ref(db, 'despesas')),
                 get(ref(db, 'receitas'))
             ]);
-            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
-            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
-            const receitas = []; if (recSnap.exists()) recSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) receitas.push(v); });
+            const abastecimentos = []; 
+            if (abastSnap.exists()) abastSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && (v.veiculo === VEICULO_MOTO || (incluirCarro && v.veiculo === VEICULO_CARRO))) abastecimentos.push(v); 
+            });
+            const despesas = []; 
+            if (despSnap.exists()) despSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && (v.veiculo === VEICULO_MOTO || (incluirCarro && v.veiculo === VEICULO_CARRO))) despesas.push(v); 
+            });
+            const receitas = []; 
+            if (recSnap.exists()) recSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) receitas.push(v); 
+            });
 
             const meses = {};
             const todos = [...receitas.map(r => ({ ...r, tipoValor: 'ganho' })), ...abastecimentos.map(a => ({ ...a, valor: a.valor_total, tipoValor: 'gasto' })), ...despesas.map(d => ({ ...d, tipoValor: 'gasto' }))];
@@ -946,4 +1048,4 @@
         }
     </script>
 </body>
-                            </html>
+    </html>
