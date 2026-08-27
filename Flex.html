@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Álcool ou Gasolina?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(145deg, #1a2a1a, #0d1a0d);
+            padding: 20px;
+        }
+        .card {
+            background: #f5f9f0;
+            border-radius: 40px;
+            padding: 30px 25px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid #b8d9a6;
+        }
+        h1 {
+            font-size: 28px;
+            color: #1d3b1a;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #3e5e3a;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 28px;
+            border-bottom: 2px dashed #b8d9a6;
+            padding-bottom: 12px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+        }
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #1d3b1a;
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+        .input-group .hint {
+            font-weight: 400;
+            color: #5e7a5a;
+            font-size: 12px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 16px 18px;
+            font-size: 20px;
+            font-weight: 600;
+            border: 2px solid #cde0c4;
+            border-radius: 16px;
+            background: white;
+            color: #1d3b1a;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .input-group input:focus {
+            border-color: #3a7a30;
+            box-shadow: 0 0 0 3px rgba(58, 122, 48, 0.2);
+        }
+        .input-group input::placeholder {
+            color: #aabfa2;
+            font-weight: 400;
+            font-size: 16px;
+        }
+        .optional-section {
+            background: #eaf3e6;
+            border-radius: 20px;
+            padding: 16px 14px;
+            margin: 20px 0 22px 0;
+            border-left: 5px solid #3a7a30;
+        }
+        .optional-section p {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1d3b1a;
+            margin-bottom: 12px;
+        }
+        .double-input {
+            display: flex;
+            gap: 12px;
+        }
+        .double-input .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .double-input .input-group input {
+            padding: 12px 14px;
+            font-size: 16px;
+        }
+        .btn-calcular {
+            width: 100%;
+            padding: 18px;
+            background: #1d3b1a;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            font-size: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 6px 0 #0a1f08;
+            margin: 10px 0 20px 0;
+            letter-spacing: 1px;
+        }
+        .btn-calcular:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #0a1f08;
+        }
+        .result-area {
+            background: white;
+            border-radius: 24px;
+            padding: 20px 18px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+            margin-top: 5px;
+        }
+        .result-item {
+            padding: 14px 0;
+            border-bottom: 1px solid #ebf3e8;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-item .label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #3e5e3a;
+            display: flex;
+            justify-content: space-between;
+        }
+        .result-item .value {
+            font-size: 22px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+        .verde { color: #1d7a1a; }
+        .vermelho { color: #b33a3a; }
+        .amarelo { color: #b38f1a; }
+        .destaque {
+            background: #eaf7e6;
+            border-radius: 30px;
+            padding: 12px 18px;
+            text-align: center;
+            margin-top: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            border: 2px solid #b8d9a6;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #7a9a72;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>⛽ Álcool ou Gasolina?</h1>
+    <div class="subtitle">Decida qual compensa mais</div>
+
+    <!-- Preços -->
+    <div class="double-input">
+        <div class="input-group">
+            <label>🥃 Etanol <span class="hint">(R$)</span></label>
+            <input type="number" id="precoAlcool" placeholder="Ex: 4,19" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="input-group">
+            <label>⛽ Gasolina <span class="hint">(R$)</span></label>
+            <input type="number" id="precoGasolina" placeholder="Ex: 6,20" step="0.01" min="0" inputmode="decimal">
+        </div>
+    </div>
+
+    <!-- Consumos (Opcional) -->
+    <div class="optional-section">
+        <p>📊 Consumo do seu carro <span style="font-weight:400;">(opcional, para cálculo exato)</span></p>
+        <div class="double-input">
+            <div class="input-group">
+                <label>🥃 Etanol <span class="hint">(km/l)</span></label>
+                <input type="number" id="consumoAlcool" placeholder="Ex: 8,5" step="0.1" min="0" inputmode="decimal">
+            </div>
+            <div class="input-group">
+                <label>⛽ Gasolina <span class="hint">(km/l)</span></label>
+                <input type="number" id="consumoGasolina" placeholder="Ex: 12" step="0.1" min="0" inputmode="decimal">
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-calcular" onclick="calcular()">✅ CALCULAR</button>
+
+    <div id="resultado" class="result-area">
+        <div style="text-align:center; color:#7a9a72; padding: 15px 0;">
+            Preencha os preços e clique em "Calcular"
+        </div>
+    </div>
+    <div class="footer">Baseado na regra dos 70% e custo por km real</div>
+</div>
+
+<script>
+    function calcular() {
+        // Pegar valores
+        const precoA = parseFloat(document.getElementById('precoAlcool').value.replace(',', '.'));
+        const precoG = parseFloat(document.getElementById('precoGasolina').value.replace(',', '.'));
+        const consA = parseFloat(document.getElementById('consumoAlcool').value.replace(',', '.'));
+        const consG = parseFloat(document.getElementById('consumoGasolina').value.replace(',', '.'));
+
+        const resultadoDiv = document.getElementById('resultado');
+
+        // Validação básica
+        if (isNaN(precoA) || isNaN(precoG) || precoA <= 0 || precoG <= 0) {
+            resultadoDiv.innerHTML = `
+                <div style="text-align:center; color:#b33a3a; padding: 15px 0; font-weight:600;">
+                    ⚠️ Insira preços válidos para ambos os combustíveis.
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+
+        // -------- 1. REGRA DOS 70% --------
+        const percentual = (precoA / precoG) * 100;
+        const compensa70 = percentual <= 70;
+
+        let status70 = '';
+        let cor70 = '';
+        let icone70 = '';
+        if (compensa70) {
+            status70 = 'ÁLCOOL COMPENSA MAIS!';
+            cor70 = 'verde';
+            icone70 = '✅';
+        } else {
+            status70 = 'GASOLINA COMPENSA MAIS!';
+            cor70 = 'vermelho';
+            icone70 = '⛽';
+        }
+
+        html += `
+            <div class="result-item">
+                <div class="label">📏 Regra dos 70% <span>${percentual.toFixed(1)}% do valor da gasolina</span></div>
+                <div class="value ${cor70}">${icone70} ${status70}</div>
+                <div style="font-size:13px; color:#5e7a5a; margin-top:4px;">
+                    ${percentual <= 70 ? 'Álcool está ≤ 70% da gasolina (regra clássica).' : 'Álcool está > 70%, gasolina é mais econômica pela regra.'}
+                </div>
+            </div>
+        `;
+
+        // -------- 2. CÁLCULO POR KM (se tiver os consumos) --------
+        if (!isNaN(consA) && !isNaN(consG) && consA > 0 && consG > 0) {
+            const custoKmA = precoA / consA;
+            const custoKmG = precoG / consG;
+
+            let vencedorKm = '';
+            let corKm = '';
+            let textoKm = '';
+            let diferenca = 0;
+
+            if (custoKmA < custoKmG) {
+                vencedorKm = '🥃 ÁLCOOL';
+                corKm = 'verde';
+                diferenca = ((custoKmG - custoKmA) / custoKmG) * 100;
+                textoKm = `Você economiza ~${diferenca.toFixed(1)}% por km com álcool.`;
+            } else if (custoKmG < custoKmA) {
+                vencedorKm = '⛽ GASOLINA';
+                corKm = 'vermelho';
+                diferenca = ((custoKmA - custoKmG) / custoKmA) * 100;
+                textoKm = `Você economiza ~${diferenca.toFixed(1)}% por km com gasolina.`;
+            } else {
+                vencedorKm = '⚖️ EMPATE TÉCNICO';
+                corKm = 'amarelo';
+                textoKm = 'O custo por km é praticamente igual!';
+            }
+
+            html += `
+                <div class="result-item">
+                    <div class="label">📊 Custo por km (exato) <span>Álcool: R$ ${custoKmA.toFixed(3)} | Gas: R$ ${custoKmG.toFixed(3)}</span></div>
+                    <div class="value ${corKm}">${vencedorKm}</div>
+                    <div style="font-size:13px; color:#5e7a5a; margin-top:4px;">${textoKm}</div>
+                </div>
+            `;
+
+            // Dica extra com base no consumo real vs regra 70%
+            const ratioIdeal = consG > 0 ? consA / consG : 0;
+            html += `
+                <div style="background:#f0f7ec; border-radius:16px; padding:12px; margin-top:10px; font-size:13px; color:#1d3b1a;">
+                    💡 <strong>Dica:</strong> Seu carro rende ${(ratioIdeal * 100).toFixed(0)}% com álcool comparado à gasolina. 
+                    ${ratioIdeal > 0 ? `O ponto de equilíbrio para seu carro é quando o álcool custar até ${(ratioIdeal * 100).toFixed(0)}% da gasolina.` : ''}
+                </div>
+            `;
+
+        } else {
+            html += `
+                <div class="result-item" style="border-bottom: none;">
+                    <div style="text-align:center; color:#7a9a72; padding: 10px 0; font-size:14px;">
+                        📝 Para o cálculo exato por km, informe os consumos (km/l) acima.
+                    </div>
+                </div>
+            `;
+        }
+
+        // Resultado destaque principal (prioriza o 70% se não tiver consumo, ou junta)
+        let recomendacaoFinal = '';
+        if (!isNaN(consA) && !isNaN(consG) && consA > 0 && consG > 0) {
+            // Se tem consumo, usa o custo por km como verdade absoluta
+            const custoKmA = precoA / consA;
+            const custoKmG = precoG / consG;
+            if (custoKmA < custoKmG) recomendacaoFinal = '🥃 Abasteça com ÁLCOOL (custo/km menor)';
+            else if (custoKmG < custoKmA) recomendacaoFinal = '⛽ Abasteça com GASOLINA (custo/km menor)';
+            else recomendacaoFinal = '⚖️ Tanto faz, estão empatados!';
+        } else {
+            // Fallback para a regra dos 70%
+            if (percentual <= 70) recomendacaoFinal = '🥃 Abasteça com ÁLCOOL (regra dos 70%)';
+            else recomendacaoFinal = '⛽ Abasteça com GASOLINA (regra dos 70%)';
+        }
+
+        // Insere o destaque no topo
+        resultadoDiv.innerHTML = `
+            <div class="destaque">
+                ${recomendacaoFinal}
+            </div>
+            ${html}
+        `;
+    }
+
+    // Permitir Enter para calcular
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') calcular();
+        });
+    });
+</script>
+
+</body>
+</html>
