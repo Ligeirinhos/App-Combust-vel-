@@ -453,9 +453,9 @@
             if (tipo === 'abastecimento') {
                 html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_abast" required></div>
                         <div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div>
-                        <div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" oninput="calcularAbastecimento('preco')"></div>
-                        <div class="form-group"><label>Litros</label><input type="number" step="0.01" id="litros" oninput="calcularAbastecimento('litros')"></div>
-                        <div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" oninput="calcularAbastecimento('valor')"></div>
+                        <div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" onblur="calcularAbastecimento('preco')"></div>
+                        <div class="form-group"><label>Litros</label><input type="number" step="0.01" id="litros" onblur="calcularAbastecimento('litros')"></div>
+                        <div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" onblur="calcularAbastecimento('valor')"></div>
                         <div class="form-group"><label>Posto</label><input type="text" id="posto"></div>
                         <div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>`;
             } else if (tipo === 'despesa') {
@@ -476,8 +476,7 @@
             if (tipo === 'receita') toggleTipoOutro();
         };
 
-        // ========== REGRA DE 3 NO ABASTECIMENTO ==========
-        // campo = 'preco' | 'litros' | 'valor' → qual campo o usuário está editando
+        // ========== REGRA DE 3 NO ABASTECIMENTO (SÓ CALCULA AO SAIR DO CAMPO) ==========
         window.calcularAbastecimento = function(campo) {
             const precoEl = document.getElementById('precoLitro');
             const litrosEl = document.getElementById('litros');
@@ -488,20 +487,16 @@
             const valor = parseFloat(valorEl.value) || 0;
 
             if (campo === 'preco') {
-                // usuário mudou o preço → recalcula o valor se tiver litros
                 if (preco > 0 && litros > 0) {
                     valorEl.value = (preco * litros).toFixed(2);
                 }
             } else if (campo === 'litros') {
-                // usuário mudou os litros → se tiver preço, recalcula o valor
                 if (preco > 0 && litros > 0) {
                     valorEl.value = (preco * litros).toFixed(2);
                 } else if (valor > 0 && litros > 0) {
-                    // se não tem preço, calcula o preço a partir do valor e litros
                     precoEl.value = (valor / litros).toFixed(3);
                 }
             } else if (campo === 'valor') {
-                // usuário mudou o valor → se tiver preço, recalcula os litros; senão, recalcula o preço
                 if (preco > 0 && valor > 0) {
                     litrosEl.value = (valor / preco).toFixed(2);
                 } else if (litros > 0 && valor > 0) {
@@ -567,6 +562,12 @@
         // ========== SALVAR ==========
         window.salvarRegistro = async function() {
             if (!currentUser) return alert('Faça login primeiro.');
+            
+            // Força o cálculo antes de salvar (caso o usuário não tenha saído do campo)
+            if (document.getElementById('precoLitro') || document.getElementById('litros') || document.getElementById('valorAbast')) {
+                calcularAbastecimento('litros');
+            }
+            
             const tipo = document.getElementById('tipoRegistro').value;
             let dados = { uid: currentUser.uid, veiculo: VEICULO_MOTO };
             try {
