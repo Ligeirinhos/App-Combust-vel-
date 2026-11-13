@@ -7,10 +7,8 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🏍️%3C/text%3E%3C/svg%3E">
     <meta name="theme-color" content="#000000">
 
-    <!-- ========== PWA: MANIFESTO ========== -->
     <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Controle%20de%20Gastos%20-%20Moto%22%2C%22short_name%22%3A%22Gastos%20Moto%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000%22%2C%22theme_color%22%3A%22%23000%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48Y2lyY2xlIGN4PSc1MCcgY3k9JzUwJyByPSc0NScgZmlsbD0nJTIzZTYzOTQ2Jy8%2BPHRleHQgeT0nLjc1ZW0nIGZvbnQtc2l6ZT0nNjAnIHg9JzUwJScgdGV4dC1hbmNob3I9J21pZGRsZSc%2B8J%2BNhjwvdGV4dD48L3N2Zz4%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
 
-    <!-- ========== PWA: META TAGS iOS ========== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Gastos Moto">
@@ -226,13 +224,13 @@
                 <div class="card">
                     <h2>🔍 Busca</h2>
                     <div class="checkbox-incluir-carro">
-                        <input type="checkbox" id="incluirCarroBusca" onchange="atualizarBusca()">
+                        <input type="checkbox" id="incluirCarroBusca">
                         <label for="incluirCarroBusca">Incluir gastos do carro</label>
                     </div>
                     <div class="filtros-busca">
                         <div class="form-group">
                             <label>Tipo de lançamento</label>
-                            <select id="buscaTipo" onchange="atualizarBusca()">
+                            <select id="buscaTipo">
                                 <option value="todos">Todos</option>
                                 <option value="receita">💰 Receitas</option>
                                 <option value="despesa">💸 Despesas</option>
@@ -241,13 +239,13 @@
                         </div>
                         <div class="form-group" id="grupoEstabelecimento" style="display:none;">
                             <label>Estabelecimento</label>
-                            <select id="buscaEstabelecimento" onchange="atualizarBusca()">
+                            <select id="buscaEstabelecimento">
                                 <option value="todos">Todos</option>
                             </select>
                         </div>
                         <div class="form-group" id="grupoCategoria" style="display:none;">
                             <label>Categoria de despesa</label>
-                            <select id="buscaCategoria" onchange="atualizarBusca()">
+                            <select id="buscaCategoria">
                                 <option value="todas">Todas</option>
                             </select>
                         </div>
@@ -262,9 +260,10 @@
                             <button class="btn btn-small" data-periodo="personalizado">Personalizado</button>
                         </div>
                         <div class="datas-personalizadas" id="datasPersonalizadas" style="display:none;">
-                            <input type="date" id="dataInicioBusca" onchange="atualizarBusca()">
-                            <input type="date" id="dataFimBusca" onchange="atualizarBusca()">
+                            <input type="date" id="dataInicioBusca">
+                            <input type="date" id="dataFimBusca">
                         </div>
+                        <button class="btn-primary" onclick="atualizarBusca()" style="width:100%; margin-top:12px;">🔍 Filtrar</button>
                     </div>
                 </div>
                 <div class="resumo-section">
@@ -351,6 +350,7 @@
             await carregarCategorias();
             renderHistorico();
             configurarAbas();
+            atualizarVisibilidadeFiltrosBusca();
         }
 
         function configurarAbas() {
@@ -476,7 +476,6 @@
             if (tipo === 'receita') toggleTipoOutro();
         };
 
-        // ========== REGRA DE 3 NO ABASTECIMENTO (SÓ CALCULA AO SAIR DO CAMPO) ==========
         window.calcularAbastecimento = function(campo) {
             const precoEl = document.getElementById('precoLitro');
             const litrosEl = document.getElementById('litros');
@@ -487,21 +486,13 @@
             const valor = parseFloat(valorEl.value) || 0;
 
             if (campo === 'preco') {
-                if (preco > 0 && litros > 0) {
-                    valorEl.value = (preco * litros).toFixed(2);
-                }
+                if (preco > 0 && litros > 0) valorEl.value = (preco * litros).toFixed(2);
             } else if (campo === 'litros') {
-                if (preco > 0 && litros > 0) {
-                    valorEl.value = (preco * litros).toFixed(2);
-                } else if (valor > 0 && litros > 0) {
-                    precoEl.value = (valor / litros).toFixed(3);
-                }
+                if (preco > 0 && litros > 0) valorEl.value = (preco * litros).toFixed(2);
+                else if (valor > 0 && litros > 0) precoEl.value = (valor / litros).toFixed(3);
             } else if (campo === 'valor') {
-                if (preco > 0 && valor > 0) {
-                    litrosEl.value = (valor / preco).toFixed(2);
-                } else if (litros > 0 && valor > 0) {
-                    precoEl.value = (valor / litros).toFixed(3);
-                }
+                if (preco > 0 && valor > 0) litrosEl.value = (valor / preco).toFixed(2);
+                else if (litros > 0 && valor > 0) precoEl.value = (valor / litros).toFixed(3);
             }
         };
 
@@ -516,30 +507,21 @@
             if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
         };
 
-        // ========== INFORMAÇÃO DE MÉDIA DE KM PARA DESPESAS ==========
         window.atualizarInfoMediaDespesa = async function() {
             const infoDiv = document.getElementById('infoMediaDespesa');
             if (!infoDiv || !currentUser) return;
             const categoria = document.getElementById('categoriaSelect')?.value || '';
             const kmAtual = Number(document.getElementById('km_desp')?.value || 0);
-            if (!categoria || categoria === 'Outro' || !kmAtual) {
-                infoDiv.innerHTML = '';
-                return;
-            }
+            if (!categoria || categoria === 'Outro' || !kmAtual) { infoDiv.innerHTML = ''; return; }
             const snap = await get(ref(db, 'despesas'));
             const despesasCategoria = [];
             if (snap.exists()) {
                 snap.forEach(child => {
                     const d = child.val();
-                    if (d.uid === currentUser.uid && d.veiculo === VEICULO_MOTO && d.categoria === categoria) {
-                        despesasCategoria.push(d);
-                    }
+                    if (d.uid === currentUser.uid && d.veiculo === VEICULO_MOTO && d.categoria === categoria) despesasCategoria.push(d);
                 });
             }
-            if (despesasCategoria.length === 0) {
-                infoDiv.innerHTML = '<span>📊 Nenhuma despesa anterior dessa categoria para a moto.</span>';
-                return;
-            }
+            if (despesasCategoria.length === 0) { infoDiv.innerHTML = '<span>📊 Nenhuma despesa anterior dessa categoria para a moto.</span>'; return; }
             despesasCategoria.sort((a, b) => new Date(a.data) - new Date(b.data));
             const ultima = despesasCategoria[despesasCategoria.length - 1];
             const kmRodados = kmAtual - ultima.km;
@@ -547,27 +529,19 @@
             if (despesasCategoria.length >= 2) {
                 const primeira = despesasCategoria[0];
                 const kmTotal = despesasCategoria[despesasCategoria.length - 1].km - primeira.km;
-                const intervalo = despesasCategoria.length - 1;
-                mediaKm = (kmTotal / intervalo).toFixed(0);
+                mediaKm = (kmTotal / (despesasCategoria.length - 1)).toFixed(0);
             } else {
                 mediaKm = 'Primeira troca, sem média';
             }
-            infoDiv.innerHTML = `
-                <p>📅 Última: ${new Date(ultima.data).toLocaleDateString('pt-BR')} (${ultima.km} km)</p>
-                <p>🛣️ Km rodados desde a última: <strong>${kmRodados} km</strong></p>
-                <p>📏 Média de km entre todas: <strong>${mediaKm}</strong></p>
-            `;
+            infoDiv.innerHTML = `<p>📅 Última: ${new Date(ultima.data).toLocaleDateString('pt-BR')} (${ultima.km} km)</p><p>🛣️ Km rodados desde a última: <strong>${kmRodados} km</strong></p><p>📏 Média de km entre todas: <strong>${mediaKm}</strong></p>`;
         };
 
         // ========== SALVAR ==========
         window.salvarRegistro = async function() {
             if (!currentUser) return alert('Faça login primeiro.');
-            
-            // Força o cálculo antes de salvar (caso o usuário não tenha saído do campo)
             if (document.getElementById('precoLitro') || document.getElementById('litros') || document.getElementById('valorAbast')) {
                 calcularAbastecimento('litros');
             }
-            
             const tipo = document.getElementById('tipoRegistro').value;
             let dados = { uid: currentUser.uid, veiculo: VEICULO_MOTO };
             try {
@@ -600,7 +574,7 @@
             }
         };
 
-        // ========== HISTÓRICO (TIMELINE COM SELETOR DE VEÍCULO) ==========
+        // ========== HISTÓRICO ==========
         window.renderHistorico = async function() {
             if (!currentUser) return;
             const filtroVeiculo = document.getElementById('filtroVeiculoTimeline')?.value || 'ambos';
@@ -845,25 +819,51 @@
             document.getElementById('saldoAno').textContent = `R$ ${(ganhos.ano - gastos.ano).toFixed(2)}`;
         }
 
-        // ========== LEMBRETES ==========
+        // ========== LEMBRETES (AGORA USA O MAIOR KM ENTRE TODOS OS REGISTROS) ==========
         async function gerarLembretes() {
             if (!currentUser) return;
             const div = document.getElementById('lembretesConteudo');
-            const snap = await get(ref(db, 'abastecimentos'));
+            div.innerHTML = '<p class="empty-state">Carregando...</p>';
+
+            // Busca todos os registros da moto (abastecimentos, despesas, receitas)
+            const [abastSnap, despSnap, recSnap] = await Promise.all([
+                get(ref(db, 'abastecimentos')),
+                get(ref(db, 'despesas')),
+                get(ref(db, 'receitas'))
+            ]);
+
             const abastecimentos = [];
-            if (snap.exists()) {
-                snap.forEach(d => {
-                    const v = d.val();
-                    if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) abastecimentos.push(v);
-                });
-            }
+            const todosKms = [];
+
+            if (abastSnap.exists()) abastSnap.forEach(d => {
+                const v = d.val();
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) {
+                    abastecimentos.push(v);
+                    if (!isNaN(v.km)) todosKms.push(Number(v.km));
+                }
+            });
+            if (despSnap.exists()) despSnap.forEach(d => {
+                const v = d.val();
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO && !isNaN(v.km)) todosKms.push(Number(v.km));
+            });
+            if (recSnap.exists()) recSnap.forEach(d => {
+                const v = d.val();
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO && !isNaN(v.km)) todosKms.push(Number(v.km));
+            });
+
             if (abastecimentos.length === 0) {
                 div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
                 return;
             }
+
+            // Maior km conhecido entre TODOS os registros da moto
+            const kmAtual = todosKms.length > 0 ? Math.max(...todosKms) : 0;
+
             abastecimentos.sort((a, b) => new Date(b.data) - new Date(a.data));
             const ultimoAbast = abastecimentos[0];
-            let html = `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
+
+            let html = `<p>📍 Km atual da moto: <strong>${kmAtual} km</strong></p>`;
+            html += `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
 
             const tanques = abastecimentos.filter(a => a.tanque_cheio);
             if (tanques.length >= 2) {
@@ -879,11 +879,16 @@
                     const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
                     const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
                     if (consumo > 0) {
-                        const previsao = Math.round(consumo * ultimoAbast.litros);
-                        html += `
-                            <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
-                            <p>🔔 Próximo abastecimento: <strong>${ultimoAbast.km + previsao} km</strong> (baseado em ${ultimoAbast.litros}L)</p>
-                        `;
+                        const autonomia = Math.round(consumo * ultimoAbast.litros);
+                        const kmAlvo = ultimoAbast.km + autonomia;
+                        const falta = kmAlvo - kmAtual;
+                        html += `<p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>`;
+                        html += `<p>🔔 Próximo abastecimento estimado: <strong>${kmAlvo} km</strong></p>`;
+                        if (falta > 0) {
+                            html += `<p>⚠️ Faltam <strong>${falta} km</strong> para o próximo abastecimento.</p>`;
+                        } else {
+                            html += `<p>🚨 Você já passou ${Math.abs(falta)} km do ponto de abastecimento!</p>`;
+                        }
                     }
                 }
             } else {
@@ -892,8 +897,21 @@
             div.innerHTML = html;
         }
 
-        // ========== BUSCA ==========
-        async function atualizarBusca() {
+        // ========== BUSCA (MANUAL COM BOTÃO FILTRAR) ==========
+        function atualizarVisibilidadeFiltrosBusca() {
+            const tipo = document.getElementById('buscaTipo')?.value || 'todos';
+            const grupoEstab = document.getElementById('grupoEstabelecimento');
+            const grupoCat = document.getElementById('grupoCategoria');
+            if (grupoEstab) grupoEstab.style.display = (tipo === 'todos' || tipo === 'receita') ? 'block' : 'none';
+            if (grupoCat) grupoCat.style.display = (tipo === 'todos' || tipo === 'despesa') ? 'block' : 'none';
+
+            // Mostrar/ocultar datas personalizadas
+            const periodoBtn = document.querySelector('#periodoBotoes .btn.active')?.dataset?.periodo || 'semana';
+            const datasDiv = document.getElementById('datasPersonalizadas');
+            if (datasDiv) datasDiv.style.display = periodoBtn === 'personalizado' ? 'flex' : 'none';
+        }
+
+        window.atualizarBusca = async function() {
             if (!currentUser) return;
             const incluirCarroBusca = document.getElementById('incluirCarroBusca')?.checked || false;
             const tipo = document.getElementById('buscaTipo').value;
@@ -902,10 +920,6 @@
             const periodoBtn = document.querySelector('#periodoBotoes .btn.active')?.dataset?.periodo || 'semana';
             const dataInicioInput = document.getElementById('dataInicioBusca').value;
             const dataFimInput = document.getElementById('dataFimBusca').value;
-
-            document.getElementById('grupoEstabelecimento').style.display = (tipo === 'todos' || tipo === 'receita') ? 'block' : 'none';
-            document.getElementById('grupoCategoria').style.display = (tipo === 'todos' || tipo === 'despesa') ? 'block' : 'none';
-            document.getElementById('datasPersonalizadas').style.display = periodoBtn === 'personalizado' ? 'flex' : 'none';
 
             let dataInicio, dataFim;
             const hoje = new Date();
@@ -969,22 +983,39 @@
             document.getElementById('buscaGanhos').textContent = `R$ ${ganhos.toFixed(2)}`;
             document.getElementById('buscaGastos').textContent = `R$ ${gastos.toFixed(2)}`;
             document.getElementById('buscaSaldo').textContent = `R$ ${(ganhos - gastos).toFixed(2)}`;
-        }
+        };
 
         function prepararBusca() {
             const selEstab = document.getElementById('buscaEstabelecimento');
             selEstab.innerHTML = '<option value="todos">Todos</option>' + categoriasReceita.map(c => `<option value="${c}">${c}</option>`).join('');
             const selCat = document.getElementById('buscaCategoria');
             selCat.innerHTML = '<option value="todas">Todas</option>' + categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('');
-            atualizarBusca();
+
+            // Preencher datas padrão com o mês atual
+            const hoje = new Date();
+            const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+            const formatarData = (d) => d.toISOString().split('T')[0];
+            document.getElementById('dataInicioBusca').value = formatarData(primeiroDia);
+            document.getElementById('dataFimBusca').value = formatarData(ultimoDia);
+
+            atualizarVisibilidadeFiltrosBusca();
         }
 
+        // Botões de período: só mudam a seleção e a visibilidade dos campos de data
         document.querySelectorAll('#periodoBotoes .btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('#periodoBotoes .btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                atualizarBusca();
+                atualizarVisibilidadeFiltrosBusca();
             });
+        });
+
+        // Ao mudar o tipo, mostra/esconde os filtros corretos
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'buscaTipo') {
+                atualizarVisibilidadeFiltrosBusca();
+            }
         });
 
         // ========== GRÁFICO MENSAL ==========
