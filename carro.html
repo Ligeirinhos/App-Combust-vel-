@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Gastos - Carro</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23e63946'/%3E%3Ctext y='.75em' font-size='60' x='50%25' text-anchor='middle'%3E🚗%3C/text%3E%3C/svg%3E">
+    
     <meta name="theme-color" content="#000000">
 
-    <!-- PWA: Manifest -->
-    <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Controle%20de%20Gastos%20-%20Carro%22%2C%22short_name%22%3A%22Gastos%20Carro%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000%22%2C%22theme_color%22%3A%22%23000%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48Y2lyY2xlIGN4PSc1MCcgY3k9JzUwJyByPSc0NScgZmlsbD0nJTIzZTYzOTQ2Jy8%2BPHRleHQgeT0nLjc1ZW0nIGZvbnQtc2l6ZT0nNjAnIHg9JzUwJScgdGV4dC1hbmNob3I9J21pZGRsZSc%2B8J%2BWl%2FwvdGV4dD48L3N2Zz4%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
-
-    <!-- PWA: Meta tags iOS -->
+    <!-- PWA configurado para abrir o carro.html -->
+    <link rel="manifest" href='data:application/json;charset=utf-8,{"name":"Controle de Gastos - Carro","short_name":"Gastos Carro","start_url":"./carro.html","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"./icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
+    
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Gastos Carro">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48Y2lyY2xlIGN4PSc1MCcgY3k9JzUwJyByPSc0NScgZmlsbD0nJTIzZTYzOTQ2Jy8+PHRleHQgeT0nLjc1ZW0nIGZvbnQtc2l6ZT0nNjAnIHg9JzUwJScgdGV4dC1hbmNob3I9J21pZGRsZSc%2B8J%2BWl%2FwvdGV4dD48L3N2Zz4=">
+    <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
 
     <style>
         :root { --bg:#000; --card:#111; --primary:#e63946; --secondary:#f4a261; --text:#fff; --gold:#ffc107; --border:#333; }
@@ -79,6 +80,7 @@
         .datas-personalizadas { display: flex; gap: 8px; margin-top: 8px; }
         .datas-personalizadas input { flex: 1; }
         .chart-container { width: 100%; height: 300px; margin-top: 12px; }
+        .info-media-despesa { background: var(--bg); border-radius: 8px; padding: 8px; margin-top: 4px; font-size: 0.8em; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -162,7 +164,11 @@
             <div class="tab-content" id="tab-lembretes">
                 <div class="card">
                     <h2>🔔 Próximo abastecimento</h2>
-                    <div id="lembretesConteudo"><p class="empty-state">Registre dois abastecimentos com tanque cheio para calcular a previsão.</p></div>
+                    <div id="lembretesConteudo"><p class="empty-state">Carregando...</p></div>
+                </div>
+                <div class="card">
+                    <h2>🛢️ Km desde a última troca de óleo</h2>
+                    <div id="oleoConteudo"><p class="empty-state">Carregando...</p></div>
                 </div>
             </div>
 
@@ -183,7 +189,7 @@
                     <div class="filtros-busca">
                         <div class="form-group">
                             <label>Tipo de lançamento</label>
-                            <select id="buscaTipo" onchange="atualizarBusca()">
+                            <select id="buscaTipo">
                                 <option value="todos">Todos</option>
                                 <option value="despesa">💸 Despesas</option>
                                 <option value="abastecimento">⛽ Abastecimentos</option>
@@ -191,7 +197,7 @@
                         </div>
                         <div class="form-group" id="grupoCategoria" style="display:none;">
                             <label>Categoria de despesa</label>
-                            <select id="buscaCategoria" onchange="atualizarBusca()">
+                            <select id="buscaCategoria">
                                 <option value="todas">Todas</option>
                             </select>
                         </div>
@@ -206,9 +212,10 @@
                             <button class="btn btn-small" data-periodo="personalizado">Personalizado</button>
                         </div>
                         <div class="datas-personalizadas" id="datasPersonalizadas" style="display:none;">
-                            <input type="date" id="dataInicioBusca" onchange="atualizarBusca()">
-                            <input type="date" id="dataFimBusca" onchange="atualizarBusca()">
+                            <input type="date" id="dataInicioBusca">
+                            <input type="date" id="dataFimBusca">
                         </div>
+                        <button class="btn-primary" onclick="atualizarBusca()" style="width:100%; margin-top:12px;">🔍 Filtrar</button>
                     </div>
                 </div>
                 <div class="resumo-section">
@@ -241,7 +248,8 @@
         const db = getDatabase(app);
         const auth = getAuth(app);
         const VEICULO = 'Carro';
-        const CAPACIDADE_TANQUE = 50; // Capacidade do tanque do carro (em litros) – ajuste se necessário
+        const CAPACIDADE_TANQUE = 50; 
+        
         let currentUser = null;
         let categoriasDespesa = [];
         let chartMensal = null;
@@ -290,6 +298,7 @@
             await carregarCategorias();
             renderHistorico();
             configurarAbas();
+            atualizarVisibilidadeFiltrosBusca();
         }
 
         function configurarAbas() {
@@ -316,8 +325,7 @@
             const snapDesp = await get(ref(db, 'categoriasDespesas'));
             if (snapDesp.exists()) categoriasDespesa = Object.values(snapDesp.val());
             else {
-                categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro','Combustível'];
-                await set(ref(db, 'categoriasDespesas'), categoriasDespesa.reduce((acc,cat,i)=>{acc[i]=cat;return acc;},{}));
+                categoriasDespesa = ['Troca de óleo','Troca de pneu','Mecânico','Revisão','Seguro'];
             }
             categoriasDespesa.sort((a, b) => a.localeCompare(b, 'pt-BR'));
             renderizarListaCategorias();
@@ -349,10 +357,7 @@
             const input = document.getElementById('novaCatDespesa');
             const nova = input.value.trim();
             if (nova && !categoriasDespesa.includes(nova)) {
-                categoriasDespesa.push(nova);
-                salvarCategoriasDespesa();
-                renderizarListaCategorias();
-                input.value = '';
+                categoriasDespesa.push(nova); salvarCategoriasDespesa(); renderizarListaCategorias(); input.value = '';
                 if (document.getElementById('tab-novo').classList.contains('active')) atualizarFormulario();
             }
         });
@@ -365,10 +370,16 @@
             const container = document.getElementById('formDinamico');
             let html = '';
             if (tipo === 'abastecimento') {
-                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_abast" required></div><div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div><div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" required oninput="calcularLitros()"></div><div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" required oninput="calcularLitros()"></div><div class="form-group"><label>Litros (automático)</label><input type="number" step="0.01" id="litros" readonly></div><div class="form-group"><label>Posto</label><input type="text" id="posto"></div><div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>`;
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_abast" required></div>
+                        <div class="form-group"><label>Km atual</label><input type="number" id="km_abast" required></div>
+                        <div class="form-group"><label>Preço por litro (R$)</label><input type="number" step="0.001" id="precoLitro" onblur="calcularAbastecimento('preco')"></div>
+                        <div class="form-group"><label>Litros</label><input type="number" step="0.01" id="litros" onblur="calcularAbastecimento('litros')"></div>
+                        <div class="form-group"><label>Valor total (R$)</label><input type="number" step="0.01" id="valorAbast" onblur="calcularAbastecimento('valor')"></div>
+                        <div class="form-group"><label>Posto</label><input type="text" id="posto"></div>
+                        <div class="form-group full checkbox-group"><input type="checkbox" id="tanqueCheio"><label>Tanque cheio?</label></div>`;
             } else if (tipo === 'despesa') {
                 const opts = categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('') + '<option value="Outro">✏️ Outro</option>';
-                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_desp" required></div><div class="form-group"><label>Km</label><input type="number" id="km_desp" required></div><div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div><div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div><div class="form-group"><label>Categoria</label><select id="categoriaSelect" onchange="toggleCategoriaOutro()">${opts}</select><input type="text" id="categoriaOutro" placeholder="Digite a categoria" style="display:none; margin-top:4px;"></div>`;
+                html = `<div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="data_desp" required></div><div class="form-group"><label>Km</label><input type="number" id="km_desp" required oninput="atualizarInfoMediaDespesa()"></div><div class="form-group"><label>Valor</label><input type="number" step="0.01" id="valorDesp" required></div><div class="form-group"><label>Descrição</label><input type="text" id="descricao" required></div><div class="form-group"><label>Categoria</label><select id="categoriaSelect" onchange="toggleCategoriaOutro(); atualizarInfoMediaDespesa()">${opts}</select><input type="text" id="categoriaOutro" placeholder="Digite a categoria" style="display:none; margin-top:4px;"></div><div class="info-media-despesa" id="infoMediaDespesa"></div>`;
             }
             container.innerHTML = html;
             const agora = new Date();
@@ -380,21 +391,68 @@
             if (tipo === 'despesa') toggleCategoriaOutro();
         };
 
-        window.calcularLitros = function() {
-            const preco = parseFloat(document.getElementById('precoLitro')?.value);
-            const valor = parseFloat(document.getElementById('valorAbast')?.value);
-            const litrosInput = document.getElementById('litros');
-            if (litrosInput && preco > 0 && valor > 0) litrosInput.value = (valor / preco).toFixed(2);
+        window.calcularAbastecimento = function(campo) {
+            const precoEl = document.getElementById('precoLitro');
+            const litrosEl = document.getElementById('litros');
+            const valorEl = document.getElementById('valorAbast');
+            if (!precoEl || !litrosEl || !valorEl) return;
+            const preco = parseFloat(precoEl.value) || 0;
+            const litros = parseFloat(litrosEl.value) || 0;
+            const valor = parseFloat(valorEl.value) || 0;
+
+            if (campo === 'preco') {
+                if (preco > 0 && litros > 0) valorEl.value = (preco * litros).toFixed(2);
+            } else if (campo === 'litros') {
+                if (preco > 0 && litros > 0) valorEl.value = (preco * litros).toFixed(2);
+                else if (valor > 0 && litros > 0) precoEl.value = (valor / litros).toFixed(3);
+            } else if (campo === 'valor') {
+                if (preco > 0 && valor > 0) litrosEl.value = (valor / preco).toFixed(2);
+                else if (litros > 0 && valor > 0) precoEl.value = (valor / litros).toFixed(3);
+            }
         };
+
         window.toggleCategoriaOutro = function() {
             const sel = document.getElementById('categoriaSelect');
             const outro = document.getElementById('categoriaOutro');
             if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
         };
 
+        window.atualizarInfoMediaDespesa = async function() {
+            const infoDiv = document.getElementById('infoMediaDespesa');
+            if (!infoDiv || !currentUser) return;
+            const categoria = document.getElementById('categoriaSelect')?.value || '';
+            const kmAtual = Number(document.getElementById('km_desp')?.value || 0);
+            if (!categoria || categoria === 'Outro' || !kmAtual) { infoDiv.innerHTML = ''; return; }
+            
+            const snap = await get(ref(db, 'despesas'));
+            const despesasCategoria = [];
+            if (snap.exists()) {
+                snap.forEach(child => {
+                    const d = child.val();
+                    if (d.uid === currentUser.uid && d.veiculo === VEICULO && d.categoria === categoria) despesasCategoria.push(d);
+                });
+            }
+            if (despesasCategoria.length === 0) { infoDiv.innerHTML = '<span>📊 Nenhuma despesa anterior dessa categoria para o carro.</span>'; return; }
+            despesasCategoria.sort((a, b) => new Date(a.data) - new Date(b.data));
+            const ultima = despesasCategoria[despesasCategoria.length - 1];
+            const kmRodados = kmAtual - ultima.km;
+            let mediaKm = '--';
+            if (despesasCategoria.length >= 2) {
+                const primeira = despesasCategoria[0];
+                const kmTotal = despesasCategoria[despesasCategoria.length - 1].km - primeira.km;
+                mediaKm = (kmTotal / (despesasCategoria.length - 1)).toFixed(0);
+            } else {
+                mediaKm = 'Primeira troca, sem média';
+            }
+            infoDiv.innerHTML = `<p>📅 Última: ${new Date(ultima.data).toLocaleDateString('pt-BR')} (${ultima.km} km)</p><p>🛣️ Km rodados desde a última: <strong>${kmRodados} km</strong></p><p>📏 Média de km entre todas: <strong>${mediaKm}</strong></p>`;
+        };
+
         // ========== SALVAR ==========
         window.salvarRegistro = async function() {
             if (!currentUser) return alert('Faça login primeiro.');
+            if (document.getElementById('precoLitro') || document.getElementById('litros') || document.getElementById('valorAbast')) {
+                calcularAbastecimento('litros');
+            }
             const tipo = document.getElementById('tipoRegistro').value;
             let dados = { uid: currentUser.uid, veiculo: VEICULO };
             try {
@@ -403,7 +461,8 @@
                     const valorTotal = document.getElementById('valorAbast');
                     const litros = document.getElementById('litros');
                     if (!precoLitro || !valorTotal || !litros) throw new Error('Campos do abastecimento não encontrados.');
-                    dados = { ...dados, data: document.getElementById('data_abast').value, km: Number(document.getElementById('km_abast').value), litros: Number(litros.value), valor_total: Number(valorTotal.value), preco_litro: Number(precoLitro.value), posto: document.getElementById('posto').value, tanque_cheio: document.getElementById('tanqueCheio').checked };
+                    if (!litros.value && !valorTotal.value) throw new Error('Preencha ao menos 2 dos 3 campos (preço, litros, valor).');
+                    dados = { ...dados, data: document.getElementById('data_abast').value, km: Number(document.getElementById('km_abast').value), litros: Number(litros.value) || 0, valor_total: Number(valorTotal.value) || 0, preco_litro: Number(precoLitro.value) || 0, posto: document.getElementById('posto').value, tanque_cheio: document.getElementById('tanqueCheio').checked };
                 } else if (tipo === 'despesa') {
                     const catSelect = document.getElementById('categoriaSelect');
                     const catOutro = document.getElementById('categoriaOutro');
@@ -421,7 +480,7 @@
             }
         };
 
-        // ========== HISTÓRICO (TIMELINE) ==========
+        // ========== HISTÓRICO ==========
         window.renderHistorico = async function() {
             if (!currentUser) return;
             const container = document.getElementById('timelineContainer');
@@ -435,7 +494,7 @@
                     snap.forEach(child => {
                         const dados = child.val();
                         if (dados.uid !== currentUser.uid) return;
-                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        if (dados.veiculo !== VEICULO) return;
                         registros.push({ id: child.key, tipoRegistro: col.slice(0,-1), ...dados });
                     });
                 }
@@ -486,7 +545,7 @@
             let formHtml = '';
             if (tipo === 'abastecimento') {
                 formHtml = `<input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}"><input type="number" id="edit-km-${id}" value="${dados.km}"><input type="number" step="0.001" id="edit-preco-${id}" value="${dados.preco_litro}"><input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor_total}"><input type="number" step="0.01" id="edit-litros-${id}" value="${dados.litros}"><input type="text" id="edit-posto-${id}" value="${dados.posto || ''}"><label><input type="checkbox" id="edit-tanque-${id}" ${dados.tanque_cheio?'checked':''}> Tanque cheio?</label>`;
-            } else {
+            } else if (tipo === 'despesa') {
                 const selectedCat = categoriasDespesa.includes(dados.categoria) ? dados.categoria : 'Outro';
                 const outroValue = selectedCat === 'Outro' ? dados.categoria || '' : '';
                 formHtml = `<input type="datetime-local" id="edit-data-${id}" value="${dados.data || ''}"><input type="number" id="edit-km-${id}" value="${dados.km}"><input type="number" step="0.01" id="edit-valor-${id}" value="${dados.valor}"><input type="text" id="edit-descricao-${id}" value="${dados.descricao || ''}"><select id="edit-categoria-${id}" onchange="toggleEditOutro('${id}')">${categoriasDespesa.map(c => `<option value="${c}" ${c===selectedCat?'selected':''}>${c}</option>`).join('')}<option value="Outro" ${selectedCat==='Outro'?'selected':''}>✏️ Outro</option></select><input type="text" id="edit-categoria-outro-${id}" value="${outroValue}" style="display:${selectedCat==='Outro'?'block':'none'}; margin-top:4px;">`;
@@ -501,7 +560,6 @@
             const outro = document.getElementById(`edit-categoria-outro-${id}`);
             if (sel && outro) outro.style.display = sel.value === 'Outro' ? 'block' : 'none';
         };
-
         window.salvarEdicao = async function(tipo, id) {
             const colecao = tipo === 'abastecimento' ? 'abastecimentos' : 'despesas';
             const at = {};
@@ -513,7 +571,7 @@
                 at['litros'] = Number(document.getElementById(`edit-litros-${id}`).value);
                 at['posto'] = document.getElementById(`edit-posto-${id}`).value;
                 at['tanque_cheio'] = document.getElementById(`edit-tanque-${id}`).checked;
-            } else {
+            } else if (tipo === 'despesa') {
                 at['data'] = document.getElementById(`edit-data-${id}`).value;
                 at['km'] = Number(document.getElementById(`edit-km-${id}`).value);
                 at['valor'] = Number(document.getElementById(`edit-valor-${id}`).value);
@@ -546,10 +604,19 @@
                 get(ref(db, 'abastecimentos')),
                 get(ref(db, 'despesas'))
             ]);
-            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
-            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
+            const abastecimentos = []; 
+            if (abastSnap.exists()) abastSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO) abastecimentos.push(v); 
+            });
+            const despesas = []; 
+            if (despSnap.exists()) despSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO) despesas.push(v); 
+            });
 
             const totalDespesas = despesas.reduce((s,d) => s + Number(d.valor), 0) + abastecimentos.reduce((s,a) => s + Number(a.valor_total), 0);
+            
             const todosGastos = [...abastecimentos, ...despesas];
             const kms = todosGastos.map(r => r.km).filter(km => !isNaN(km));
             const custoKm = kms.length >= 2 ? (totalDespesas / (Math.max(...kms) - Math.min(...kms))) : 0;
@@ -621,60 +688,129 @@
         async function gerarLembretes() {
             if (!currentUser) return;
             const div = document.getElementById('lembretesConteudo');
-            const snap = await get(ref(db, 'abastecimentos'));
+            const oleoDiv = document.getElementById('oleoConteudo');
+            div.innerHTML = '<p class="empty-state">Carregando...</p>';
+            oleoDiv.innerHTML = '<p class="empty-state">Carregando...</p>';
+
+            const [abastSnap, despSnap] = await Promise.all([
+                get(ref(db, 'abastecimentos')),
+                get(ref(db, 'despesas'))
+            ]);
+
             const abastecimentos = [];
-            if (snap.exists()) {
-                snap.forEach(d => {
-                    const v = d.val();
-                    if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v);
-                });
-            }
+            const todosKms = [];
+
+            if (abastSnap.exists()) abastSnap.forEach(d => {
+                const v = d.val();
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO) {
+                    abastecimentos.push(v);
+                    if (!isNaN(v.km)) todosKms.push(Number(v.km));
+                }
+            });
+            if (despSnap.exists()) despSnap.forEach(d => {
+                const v = d.val();
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO && !isNaN(v.km)) todosKms.push(Number(v.km));
+            });
+
+            const kmAtual = todosKms.length > 0 ? Math.max(...todosKms) : 0;
+
             if (abastecimentos.length === 0) {
                 div.innerHTML = '<p class="empty-state">Nenhum abastecimento registrado.</p>';
+            } else {
+                abastecimentos.sort((a, b) => new Date(b.data) - new Date(a.data));
+                const ultimoAbast = abastecimentos[0];
+
+                let html = `<p>📍 Km atual do carro: <strong>${kmAtual} km</strong></p>`;
+                html += `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
+
+                const tanques = abastecimentos.filter(a => a.tanque_cheio);
+                if (tanques.length >= 2) {
+                    tanques.sort((a, b) => new Date(a.data) - new Date(b.data));
+                    const ultimoTanque = tanques[tanques.length - 1];
+                    const penultimoTanque = tanques[tanques.length - 2];
+                    const kmPerc = ultimoTanque.km - penultimoTanque.km;
+                    if (kmPerc > 0) {
+                        const entre = abastecimentos.filter(a => {
+                            const d = new Date(a.data);
+                            return d > new Date(penultimoTanque.data) && d <= new Date(ultimoTanque.data);
+                        });
+                        const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
+                        const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
+                        if (consumo > 0) {
+                            const autonomia = Math.round(consumo * ultimoAbast.litros);
+                            const kmAlvo = ultimoAbast.km + autonomia;
+                            const falta = kmAlvo - kmAtual;
+                            html += `<p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>`;
+                            html += `<p>🔔 Próximo abastecimento estimado: <strong>${kmAlvo} km</strong></p>`;
+                            if (falta > 0) {
+                                html += `<p>⚠️ Faltam <strong>${falta} km</strong> para o próximo abastecimento.</p>`;
+                            } else {
+                                html += `<p>🚨 Você já passou ${Math.abs(falta)} km do ponto de abastecimento!</p>`;
+                            }
+                        }
+                    }
+                } else {
+                    html += '<p class="empty-state">Registre dois tanques cheios para calcular o consumo médio.</p>';
+                }
+                div.innerHTML = html;
+            }
+
+            if (!despSnap.exists()) {
+                oleoDiv.innerHTML = '<p class="empty-state">Nenhuma despesa registrada.</p>';
                 return;
             }
-            abastecimentos.sort((a, b) => new Date(b.data) - new Date(a.data));
-            const ultimoAbast = abastecimentos[0];
-            let html = `<p>⛽ Último abastecimento: <strong>${ultimoAbast.km} km</strong> (${ultimoAbast.litros}L) em ${new Date(ultimoAbast.data).toLocaleDateString('pt-BR')}</p>`;
+            const despesas = [];
+            despSnap.forEach(d => {
+                const v = d.val();
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO) despesas.push(v);
+            });
 
-            const tanques = abastecimentos.filter(a => a.tanque_cheio);
-            if (tanques.length >= 2) {
-                tanques.sort((a, b) => new Date(a.data) - new Date(b.data));
-                const ultimoTanque = tanques[tanques.length - 1];
-                const penultimoTanque = tanques[tanques.length - 2];
-                const kmPerc = ultimoTanque.km - penultimoTanque.km;
-                if (kmPerc > 0) {
-                    const entre = abastecimentos.filter(a => {
-                        const d = new Date(a.data);
-                        return d > new Date(penultimoTanque.data) && d <= new Date(ultimoTanque.data);
-                    });
-                    const totalLitros = entre.reduce((s, a) => s + a.litros, 0);
-                    const consumo = totalLitros > 0 ? kmPerc / totalLitros : 0;
-                    if (consumo > 0) {
-                        const previsao = Math.round(consumo * ultimoAbast.litros);
-                        html += `
-                            <p>📏 Consumo médio: <strong>${consumo.toFixed(2)} km/l</strong></p>
-                            <p>🔔 Próximo abastecimento: <strong>${ultimoAbast.km + previsao} km</strong> (baseado em ${ultimoAbast.litros}L)</p>
-                        `;
-                    }
-                }
-            } else {
-                html += '<p class="empty-state">Registre dois tanques cheios para calcular o consumo médio.</p>';
+            const trocasOleo = despesas.filter(d => {
+                const cat = (d.categoria || '').toLowerCase();
+                return cat.includes('óleo') || cat.includes('oleo');
+            });
+
+            if (trocasOleo.length === 0) {
+                oleoDiv.innerHTML = '<p class="empty-state">Nenhuma troca de óleo registrada. Adicione uma despesa com a categoria "Troca de óleo".</p>';
+                return;
             }
-            div.innerHTML = html;
+
+            trocasOleo.sort((a, b) => new Date(b.data) - new Date(a.data));
+            const ultimaTroca = trocasOleo[0];
+            const kmRodados = kmAtual - ultimaTroca.km;
+
+            let htmlOleo = `<p>📍 Km atual do carro: <strong>${kmAtual} km</strong></p>`;
+            htmlOleo += `<p>🛢️ Última troca de óleo: <strong>${ultimaTroca.km} km</strong> em ${new Date(ultimaTroca.data).toLocaleDateString('pt-BR')}</p>`;
+            htmlOleo += `<p>🛣️ Km rodados desde a última troca: <strong>${kmRodados} km</strong></p>`;
+
+            if (trocasOleo.length >= 2) {
+                const kmTotal = trocasOleo[0].km - trocasOleo[trocasOleo.length - 1].km;
+                const mediaKm = (kmTotal / (trocasOleo.length - 1)).toFixed(0);
+                htmlOleo += `<p>📏 Média de km entre trocas: <strong>${mediaKm} km</strong></p>`;
+            } else {
+                htmlOleo += `<p style="opacity:0.7;">Registre mais trocas para calcular a média.</p>`;
+            }
+            oleoDiv.innerHTML = htmlOleo;
         }
 
         // ========== BUSCA ==========
-        async function atualizarBusca() {
+        function atualizarVisibilidadeFiltrosBusca() {
+            const tipo = document.getElementById('buscaTipo')?.value || 'todos';
+            const grupoCat = document.getElementById('grupoCategoria');
+            if (grupoCat) grupoCat.style.display = (tipo === 'todos' || tipo === 'despesa') ? 'block' : 'none';
+
+            const periodoBtn = document.querySelector('#periodoBotoes .btn.active')?.dataset?.periodo || 'semana';
+            const datasDiv = document.getElementById('datasPersonalizadas');
+            if (datasDiv) datasDiv.style.display = periodoBtn === 'personalizado' ? 'flex' : 'none';
+        }
+
+        window.atualizarBusca = async function() {
             if (!currentUser) return;
             const tipo = document.getElementById('buscaTipo').value;
             const categoria = document.getElementById('buscaCategoria')?.value || 'todas';
             const periodoBtn = document.querySelector('#periodoBotoes .btn.active')?.dataset?.periodo || 'semana';
             const dataInicioInput = document.getElementById('dataInicioBusca').value;
             const dataFimInput = document.getElementById('dataFimBusca').value;
-
-            document.getElementById('grupoCategoria').style.display = (tipo === 'todos' || tipo === 'despesa') ? 'block' : 'none';
-            document.getElementById('datasPersonalizadas').style.display = periodoBtn === 'personalizado' ? 'flex' : 'none';
 
             let dataInicio, dataFim;
             const hoje = new Date();
@@ -716,7 +852,7 @@
                     snap.forEach(child => {
                         const dados = child.val();
                         if (dados.uid !== currentUser.uid) return;
-                        if (dados.veiculo && dados.veiculo !== VEICULO) return;
+                        if (dados.veiculo !== VEICULO) return;
                         const dataReg = new Date(dados.data);
                         if (dataInicio && dataReg < dataInicio) return;
                         if (dataFim && dataReg >= dataFim) return;
@@ -731,20 +867,34 @@
                 }
             }
             document.getElementById('buscaGastos').textContent = `R$ ${gastos.toFixed(2)}`;
-        }
+        };
 
         function prepararBusca() {
             const selCat = document.getElementById('buscaCategoria');
             selCat.innerHTML = '<option value="todas">Todas</option>' + categoriasDespesa.map(c => `<option value="${c}">${c}</option>`).join('');
-            atualizarBusca();
+
+            const hoje = new Date();
+            const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+            const formatarData = (d) => d.toISOString().split('T')[0];
+            document.getElementById('dataInicioBusca').value = formatarData(primeiroDia);
+            document.getElementById('dataFimBusca').value = formatarData(ultimoDia);
+
+            atualizarVisibilidadeFiltrosBusca();
         }
 
         document.querySelectorAll('#periodoBotoes .btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('#periodoBotoes .btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                atualizarBusca();
+                atualizarVisibilidadeFiltrosBusca();
             });
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'buscaTipo') {
+                atualizarVisibilidadeFiltrosBusca();
+            }
         });
 
         // ========== GRÁFICO MENSAL ==========
@@ -754,8 +904,16 @@
                 get(ref(db, 'abastecimentos')),
                 get(ref(db, 'despesas'))
             ]);
-            const abastecimentos = []; if (abastSnap.exists()) abastSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) abastecimentos.push(v); });
-            const despesas = []; if (despSnap.exists()) despSnap.forEach(d => { const v = d.val(); if (v.uid === currentUser.uid && (v.veiculo === VEICULO || !v.veiculo)) despesas.push(v); });
+            const abastecimentos = []; 
+            if (abastSnap.exists()) abastSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO) abastecimentos.push(v); 
+            });
+            const despesas = []; 
+            if (despSnap.exists()) despSnap.forEach(d => { 
+                const v = d.val(); 
+                if (v.uid === currentUser.uid && v.veiculo === VEICULO) despesas.push(v); 
+            });
 
             const meses = {};
             const todos = [...abastecimentos.map(a => ({ ...a, valor: a.valor_total, tipoValor: 'gasto' })), ...despesas.map(d => ({ ...d, tipoValor: 'gasto' }))];
@@ -804,15 +962,13 @@
         }
     </script>
 
-    <!-- ========== PWA: SERVICE WORKER ========== -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => self.clients.claim()); self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));`;
-                const blob = new Blob([swCode], {type: 'application/javascript'});
-                navigator.serviceWorker.register(URL.createObjectURL(blob));
-            });
-        }
+      if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+            .catch(error => console.error('Falha ao registrar o Service Worker:', error));
+        });
+      }
     </script>
 </body>
 </html>
