@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Gastos - Moto</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='38' fill='%23e63946'/%3E%3Cg transform='translate(30,50) scale(1.4)' fill='none' stroke='%23ffffff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='65' r='12'/%3E%3Ccircle cx='82' cy='65' r='12'/%3E%3Cpath d='M18 65 L35 40 L55 40 L60 50 L45 50 L38 65'/%3E%3Cpath d='M55 40 L70 40 L82 65'/%3E%3Cpath d='M45 38 L60 38'/%3E%3C/g%3E%3C/svg%3E">
+    
     <meta name="theme-color" content="#000000">
 
-    <link rel="manifest" href='data:application/json;charset=utf-8,{"name":"Controle de Gastos - Moto","short_name":"Gastos Moto","start_url":".","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjM4IiBmaWxsPSIjZTYzOTQ2Ii8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMzAsNTApIHNjYWxlKDEuNCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSI2IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjE4IiBjeT0iNjUiIHI9IjEyIi8+PGNpcmNsZSBjeD0iODIiIGN5PSI2NSIgcj0iMTIiLz48cGF0aCBkPSJNMTggNjUgTDM1IDQwIEw1NSA0MCBMNjAgNTAgTDQ1IDUwIEwzOCA2NSIvPjxwYXRoIGQ9Ik01NSA0MCBMNzAgNDAgTDgyIDY1Ii8+PHBhdGggZD0iTTQ1IDM4IEw2MCAzOCIvPjwvZz48L3N2Zz4=","sizes":"192x192","type":"image/svg+xml"}]}'>
-
+    <!-- PWA: Manifesto e Ícones -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+    
+    <!-- PWA: iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Gastos Moto">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjM4IiBmaWxsPSIjZTYzOTQ2Ii8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMzAsNTApIHNjYWxlKDEuNCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSI2IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjE4IiBjeT0iNjUiIHI9IjEyIi8+PGNpcmNsZSBjeD0iODIiIGN5PSI2NSIgcj0iMTIiLz48cGF0aCBkPSJNMTggNjUgTDM1IDQwIEw1NSA0MCBMNjAgNTAgTDQ1IDUwIEwzOCA2NSIvPjxwYXRoIGQ9Ik01NSA0MCBMNzAgNDAgTDgyIDY1Ii8+PHBhdGggZD0iTTQ1IDM4IEw2MCAzOCIvPjwvZz48L3N2Zz4=">
+    <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
 
     <style>
         :root { --bg:#000; --card:#111; --primary:#e63946; --secondary:#f4a261; --text:#fff; --gold:#ffc107; --border:#333; }
@@ -82,9 +85,6 @@
         .checkbox-incluir-carro input { width: 18px; height: 18px; accent-color: var(--primary); }
         .info-media-despesa { background: var(--bg); border-radius: 8px; padding: 8px; margin-top: 4px; font-size: 0.8em; border: 1px solid var(--border); }
         .veiculo-info { font-size: 0.8em; opacity: 0.8; margin-left: 4px; }
-        .info-oleo { background: var(--bg); border-radius: 10px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border); font-size: 0.85em; }
-        .info-oleo h4 { color: var(--secondary); margin-bottom: 8px; }
-        .info-oleo strong { color: var(--gold); }
     </style>
 </head>
 <body>
@@ -200,7 +200,7 @@
             <div class="tab-content" id="tab-lembretes">
                 <div class="card">
                     <h2>🔔 Próximo abastecimento</h2>
-                    <div id="lembretesConteudo"><p class="empty-state">Registre dois abastecimentos com tanque cheio para calcular a previsão.</p></div>
+                    <div id="lembretesConteudo"><p class="empty-state">Carregando...</p></div>
                 </div>
                 <div class="card">
                     <h2>🛢️ Km desde a última troca de óleo</h2>
@@ -826,7 +826,7 @@
             document.getElementById('saldoAno').textContent = `R$ ${(ganhos.ano - gastos.ano).toFixed(2)}`;
         }
 
-        // ========== LEMBRETES (ABASTECIMENTO + ÓLEO) ==========
+        // ========== LEMBRETES ==========
         async function gerarLembretes() {
             if (!currentUser) return;
             const div = document.getElementById('lembretesConteudo');
@@ -914,7 +914,6 @@
                 if (v.uid === currentUser.uid && v.veiculo === VEICULO_MOTO) despesas.push(v);
             });
 
-            // Procura despesas cuja categoria contenha "óleo" (com ou sem acento)
             const trocasOleo = despesas.filter(d => {
                 const cat = (d.categoria || '').toLowerCase();
                 return cat.includes('óleo') || cat.includes('oleo');
@@ -1142,14 +1141,14 @@
         }
     </script>
 
+    <!-- PWA: Service Worker -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => e.clients.claim()); self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));`;
-                const blob = new Blob([swCode], {type: 'application/javascript'});
-                navigator.serviceWorker.register(URL.createObjectURL(blob));
-            });
-        }
+      if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+            .catch(error => console.error('Falha ao registrar o Service Worker:', error));
+        });
+      }
     </script>
 </body>
 </html>
